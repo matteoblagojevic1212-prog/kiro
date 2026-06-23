@@ -24,6 +24,7 @@ except Exception:                          # pragma: no cover - very old Python
     EU_TZ = timezone(timedelta(hours=2))   # fallback CEST
 
 import engine
+import live
 import ratings
 from data import GROUPS, TEAMS, team
 from schedule import SCHEDULE
@@ -31,7 +32,7 @@ from schedule import SCHEDULE
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
 
-MATCH_MINUTES = 110          # rough match length incl. half-time
+MATCH_MINUTES = 125          # live window: 90 + half-time + stoppage buffer
 UTC = timezone.utc
 
 
@@ -63,8 +64,18 @@ def match_status(mt, now):
     return "finished"
 
 
-def serialize_match(mt, now):
+def serialize_match(mt, now, resolved=None):
     status = match_status(mt, now)
+    r = resolved.get(mt["id"]) if (resolved and mt["group"] is None) else None
+
+    home_key = r["home"] if r else mt["home"]
+    away_key = r["away"] if r else mt["away"]
+    home_label = r["home_label"] if r else mt["home_label"]
+    away_label = r["away_label"] if r else mt["away_label"]
+    home_iso = r["home_iso"] if r else (team(mt["home"])["iso"] if mt["home"] else "un")
+    away_iso = r["away_iso"] if r else (team(mt["away"])["iso"] if mt["away"] else "un")
+    analyzable = r["analyzable"] if r else bool(mt["home"] and mt["away"])
+
     out = {
         "id": mt["id"],
         "stage": mt["stage"],
@@ -72,30 +83,60 @@ def serialize_match(mt, now):
         "venue": mt["venue"],
         "status": status,
         "kickoff": eu_strings(mt["kickoff"]),
-        "home": mt["home"],
-        "away": mt["away"],
-        "home_label": mt["home_label"],
-        "away_label": mt["away_label"],
-        "home_iso": team(mt["home"])["iso"] if mt["home"] else "un",
-        "away_iso": team(mt["away"])["iso"] if mt["away"] else "un",
-        "analyzable": bool(mt["home"] and mt["away"]),
+        "home": home_key, "away": away_key,
+        "home_label": home_label, "away_label": away_label,
+        "home_iso": home_iso, "away_iso": away_iso,
+        "analyzable": analyzable,
         "score": None,
+        "events": [],
     }
-    if status in ("live", "finished") and mt["home"] and mt["away"]:
-        res = mt.get("result") or engine.simulated_result(mt)
+
+    if status in ("live", "finished") and home_key and away_key:
+        res = (r["result"] if r and r["result"] else mt.get("result"))
+        if not res:
+            res = engine.simulated_result_for(mt["id"], home_key, away_key)
         if res:
             out["score"] = {"home": res[0], "away": res[1]}
+        out["events"] = engine.goal_events(
+            dict(mt, result=res), home_key, away_key)
     return out
 
 
 def ordered_matches(now):
     """Upcoming/live first (soonest first), then finished (most recent first)."""
+    resolved = engine.resolve_bracket(GROUPS, SCHEDULE, now)
     enriched = [(mt, match_status(mt, now)) for mt in SCHEDULE]
     not_done = [mt for mt, s in enriched if s != "finished"]
     done = [mt for mt, s in enriched if s == "finished"]
     not_done.sort(key=lambda m: m["kickoff"])
     done.sort(key=lambda m: m["kickoff"], reverse=True)
-    return [serialize_match(mt, now) for mt in (not_done + done)]
+    out = [serialize_match(mt, now, resolved) for mt in (not_done + done)]
+    _apply_live_overlay(out)
+    return out
+
+
+def _apply_live_overlay(matches):
+    """Overlay REAL live scores from football-data.org when a key is configured."""
+    try:
+        feed = live.fetch_live()
+    except Exception:
+        feed = {}
+    if not feed:
+        return
+    for m in matches:
+        info = feed.get((m["home"], m["away"]))
+        if not info:
+            continue
+        st = info.get("status")
+        if st in ("IN_PLAY", "PAUSED"):
+            m["status"] = "live"
+        elif st == "FINISHED":
+            m["status"] = "finished"
+        if info.get("home") is not None and info.get("away") is not None:
+            m["score"] = {"home": info["home"], "away": info["away"]}
+            m["live_real"] = True
+        if info.get("minute") is not None:
+            m["live_minute"] = info["minute"]
 
 
 def find_match(mid):
@@ -148,10 +189,19 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == "/" or path == "/index.html":
                 return self._file("templates/index.html", "text/html; charset=utf-8")
-            if path == "/static/style.css":
-                return self._file("static/style.css", "text/css; charset=utf-8")
-            if path == "/static/app.js":
-                return self._file("static/app.js", "application/javascript; charset=utf-8")
+            if path.startswith("/static/"):
+                rel = path[1:]  # strip leading /
+                if ".." in rel:
+                    return self._send(403, "Forbidden", "text/plain")
+                ext = rel.rsplit(".", 1)[-1].lower()
+                ctype = {
+                    "css": "text/css; charset=utf-8",
+                    "js": "application/javascript; charset=utf-8",
+                    "svg": "image/svg+xml",
+                    "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+                    "gif": "image/gif", "webp": "image/webp", "ico": "image/x-icon",
+                }.get(ext, "application/octet-stream")
+                return self._file(rel, ctype)
 
             if path == "/api/time":
                 now = now_utc()
@@ -186,10 +236,16 @@ class Handler(BaseHTTPRequestHandler):
                     mt = find_match(mid)
                     if not mt:
                         return self._json({"error": "match not found"}, 404)
-                    if not (mt["home"] and mt["away"]):
+                    home, away = mt["home"], mt["away"]
+                    if not (home and away) and mt["group"] is None:
+                        # resolve knockout teams if they're known by now
+                        res = engine.resolve_bracket(GROUPS, SCHEDULE, now_utc())
+                        r = res.get(mid)
+                        if r and r["analyzable"]:
+                            home, away = r["home"], r["away"]
+                    if not (home and away):
                         return self._json({"error": "teams not yet decided "
                                            "for this knockout match"}, 400)
-                    home, away = mt["home"], mt["away"]
                 if not (home and away):
                     return self._json({"error": "home & away required"}, 400)
                 if home not in TEAMS:

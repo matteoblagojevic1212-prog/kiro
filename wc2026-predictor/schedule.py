@@ -176,6 +176,7 @@ def build_schedule():
         result = (hs, as_) if hs is not None and as_ is not None else None
         matches.append({
             "id": "M%03d" % mid,
+            "fifa_no": mid,
             "stage": "Group %s" % group,
             "group": group,
             "home": home, "away": away,
@@ -186,19 +187,23 @@ def build_schedule():
         })
         mid += 1
 
+    ko_no = 73  # FIFA match numbers for the knockout stage start at 73
     for date_str, time_str, stage, hcode, acode, venue in KNOCKOUTS:
         matches.append({
             "id": "M%03d" % mid,
+            "fifa_no": ko_no,
             "stage": stage,
             "group": None,
             "home": hcode if hcode in TEAMS else None,
             "away": acode if acode in TEAMS else None,
+            "home_code": hcode, "away_code": acode,
             "home_label": _pretty(hcode), "away_label": _pretty(acode),
             "kickoff": _kickoff(date_str, time_str),
             "venue": venue,
             "result": None,
         })
         mid += 1
+        ko_no += 1
 
     matches.sort(key=lambda m: m["kickoff"])
     return matches

@@ -21,7 +21,7 @@ will contain 3+ goals (never a 1-0 / 0-0).
 import math
 import random
 
-from data import team, display_name
+from data import team, display_name, TEAMS
 from ratings import get_elo
 
 MAX_GOALS = 8          # scoreline grid is 0..8 for each team
@@ -193,29 +193,24 @@ def analyze(home, away):
 
     hname, aname = display_name(home), display_name(away)
 
-    # The single headline scoreline is the best-fit one, and the goals "lean"
-    # is read DIRECTLY off that scoreline's total -> they can never contradict.
-    # (e.g. it can never say "Over 2.5" while showing a 1-0 / 1-1 prediction.)
-    fit_total = bi + bj
-    leans_over = fit_total >= 3
-    goals_call = "Over 2.5" if leans_over else "Under 2.5"
-    over25 = _over_prob(m, 2.5)
-    lean_pct = _pct(over25 if leans_over else (1 - over25))
-    tight = abs(over25 - 0.5) < 0.06
+    # The headline prediction is the SINGLE most probable exact score (highest
+    # %), so the highlighted pick is always genuinely the most likely one.
+    top3 = top_scorelines(m, 3)
+    mi, mj, mp = top3[0]
 
-    # Winner / result wording.
+    # Over/Under is reported separately as its own market probability. The most
+    # likely single score can be an "under" even when Over 2.5 is more likely
+    # overall, because Over 2.5 sums many higher-scoring results together.
+    goals_call = "Over 2.5" if over25 >= 0.5 else "Under 2.5"
+    goals_call_pct = _pct(over25 if over25 >= 0.5 else (1 - over25))
+
     spread = max(p_home, p_draw, p_away)
     if p_draw == spread:
-        result_phrase = "evenly matched - a draw is the single most likely result"
-        fav = None
+        result_phrase = "Evenly matched - a draw is the single most likely result"
     else:
         fav = hname if p_home >= p_away else aname
         result_phrase = "%s are favourites (%.0f%% to win)" % (fav, _pct(spread))
-
-    lean_phrase = ("the goals market is a coin-flip" if tight
-                   else "leans %s goals (%.0f%%)" % (goals_call, lean_pct))
-    headline = ("%s. The model's most likely scoreline is %d-%d, so it %s."
-                % (result_phrase[0].upper() + result_phrase[1:], bi, bj, lean_phrase))
+    headline = "%s. Most likely score %d-%d (%.0f%%)." % (result_phrase, mi, mj, mp)
 
     return {
         "home": home,
@@ -228,9 +223,8 @@ def analyze(home, away):
                "total": round(lam_h + lam_a, 2)},
         "headline": headline,
         "prediction": {
-            "home": bi, "away": bj, "prob": bp,
-            "goals_call": goals_call, "goals_prob": lean_pct,
-            "tight": tight,
+            "home": mi, "away": mj, "prob": mp,
+            "goals_call": goals_call, "goals_prob": goals_call_pct,
         },
         "best_fit_scoreline": {"home": bi, "away": bj, "prob": bp,
                                "leans": goals_call},
@@ -348,3 +342,159 @@ if __name__ == "__main__":
     b = analyze("Argentina", "Brazil")
     print("xG:", b["xg"], "Result:", b["result"])
     print("Top scorelines:", b["top_scorelines"], "Best-fit:", b["best_fit_scoreline"])
+
+
+
+# ---------------------------------------------------------------------------
+# Live goal timeline (used by the clock-driven "live" match view)
+# ---------------------------------------------------------------------------
+def goal_events(match, home_key=None, away_key=None):
+    """
+    Deterministic minute-by-minute goal timeline for a match, derived from its
+    final score (real score if known, else the model's predicted score). Seeded
+    by the match id so it never changes between page loads.
+    """
+    res = match.get("result")
+    if not res:
+        res = simulated_result_for(match["id"], home_key or match.get("home"),
+                                   away_key or match.get("away"))
+    if not res:
+        return []
+    hs, as_ = res
+    rng = random.Random("ev" + match["id"])
+    evs = []
+    for _ in range(hs):
+        evs.append({"team": "home", "minute": rng.randint(1, 90)})
+    for _ in range(as_):
+        evs.append({"team": "away", "minute": rng.randint(1, 92)})
+    evs.sort(key=lambda e: e["minute"])
+    return evs
+
+
+def simulated_result_for(match_id, home, away):
+    if not home or not away:
+        return None
+    lam_h, lam_a = expected_goals(home, away)
+    rng = random.Random(match_id)
+
+    def sample(lam):
+        u = rng.random()
+        cum = 0.0
+        for k in range(0, MAX_GOALS + 1):
+            cum += _poisson_pmf(k, lam)
+            if u <= cum:
+                return k
+        return MAX_GOALS
+
+    return sample(lam_h), sample(lam_a)
+
+
+def _ko_result(match_id, home, away):
+    """A knockout result that always has a winner (penalties if drawn)."""
+    res = simulated_result_for(match_id, home, away)
+    if not res:
+        return None
+    hs, as_ = res
+    if hs > as_:
+        return hs, as_, home, away
+    if as_ > hs:
+        return hs, as_, away, home
+    coin = random.Random("pens" + match_id).random()
+    winner, loser = (home, away) if coin < 0.5 else (away, home)
+    return hs, as_, winner, loser
+
+
+
+# ---------------------------------------------------------------------------
+# Bracket resolution: fill knockout slots from real results as they come in
+# ---------------------------------------------------------------------------
+def resolve_bracket(groups, schedule, now):
+    """
+    Returns {match_id: {home, away, home_label, away_label, home_iso, away_iso,
+    analyzable, result}} for knockout matches, resolving slot codes (1A, 2B,
+    3CDF.., W73, RU101) into real teams once the feeding results are known.
+    """
+    from data import team as _team, display_name as _disp
+
+    standings = compute_standings(groups, schedule, now)
+
+    def grp_done(g):
+        ms = [m for m in schedule if m["group"] == g]
+        return ms and all(m["kickoff"] <= now for m in ms)
+
+    slot = {}
+    for g, rows in standings.items():
+        if grp_done(g):
+            slot["1" + g] = rows[0]["team"]
+            slot["2" + g] = rows[1]["team"]
+
+    # Best 8 third-placed teams (only once every group is complete).
+    third_assign = {}
+    if all(grp_done(g) for g in groups):
+        thirds = [standings[g][2] for g in groups]
+        thirds.sort(key=lambda r: (r["Pts"], r["GD"], r["GF"]), reverse=True)
+        qualified = thirds[:8]
+        used = set()
+        ko = sorted([m for m in schedule if m["group"] is None],
+                    key=lambda m: m["fifa_no"])
+        third_slots = []
+        for m in ko:
+            for code in (m.get("home_code"), m.get("away_code")):
+                if code and code.startswith("3") and len(code) > 1 and code not in third_slots:
+                    third_slots.append(code)
+        for code in third_slots:
+            allowed = set(code[1:])
+            pick = None
+            for r in qualified:
+                if r["team"] in used:
+                    continue
+                if group_of_team(groups, r["team"]) in allowed:
+                    pick = r["team"]; break
+            if pick is None:
+                for r in qualified:
+                    if r["team"] not in used:
+                        pick = r["team"]; break
+            if pick:
+                used.add(pick); third_assign[code] = pick
+
+    winner_of, loser_of, out = {}, {}, {}
+
+    def resolve(code):
+        if code in TEAMS:
+            return code
+        if code in slot:
+            return slot[code]
+        if code in third_assign:
+            return third_assign[code]
+        if code.startswith("RU") and code[2:].isdigit():
+            return loser_of.get(int(code[2:]))
+        if code.startswith("W") and code[1:].isdigit():
+            return winner_of.get(int(code[1:]))
+        return None
+
+    for m in sorted([x for x in schedule if x["group"] is None],
+                    key=lambda x: x["fifa_no"]):
+        h = resolve(m["home_code"]); a = resolve(m["away_code"])
+        result = None
+        if h and a and m["kickoff"] <= now:
+            hs, as_, win, lose = _ko_result(m["id"], h, a)
+            winner_of[m["fifa_no"]] = win
+            loser_of[m["fifa_no"]] = lose
+            result = (hs, as_)
+        out[m["id"]] = {
+            "home": h, "away": a,
+            "home_label": _disp(h) if h else m["home_label"],
+            "away_label": _disp(a) if a else m["away_label"],
+            "home_iso": _team(h)["iso"] if h else "un",
+            "away_iso": _team(a)["iso"] if a else "un",
+            "analyzable": bool(h and a),
+            "result": result,
+        }
+    return out
+
+
+def group_of_team(groups, name):
+    for g, members in groups.items():
+        if name in members:
+            return g
+    return None

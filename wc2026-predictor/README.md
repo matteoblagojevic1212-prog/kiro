@@ -49,6 +49,24 @@ Click **🤖 Analyze with AI** on any match to get:
 - **Likely goalscorers** and **likely assist providers**, with probabilities.
 - Expected goals (xG) for each team.
 
+## Live scores
+
+- Out of the box, matches show a **clock-driven live view**: a running minute
+  (`67'`, `HT`, `FT`) and the score building up over the 90 minutes, all from
+  your device clock — no internet or key required.
+- For **real** live scores (like Google), add a free API key from
+  [football-data.org](https://www.football-data.org/client/register) and run:
+  - macOS/Linux: `LIVE_API_KEY=your_key python3 server.py`
+  - Windows: `set LIVE_API_KEY=your_key` then `python server.py`
+  The app then pulls actual live scores over your wifi and overlays them. If the
+  key or network is unavailable it silently falls back to the clock-driven view.
+
+## Auto-filling knockout bracket
+
+As each group finishes, the **Round of 32 fills in automatically** with the real
+group winners, runners-up and the 8 best third-placed teams. Knockout winners
+propagate forward as those matches complete, so the bracket updates in real time.
+
 ## How the predictions work (and why they're consistent)
 
 Team strength is **computed from real match data**, not hard-coded. The file
@@ -111,3 +129,10 @@ If FIFA's official draw, fixtures or squads differ, just edit `GROUPS`,
   offline, names still show; flags simply hide.
 - Team ratings and player lists are illustrative and editable.
 - For entertainment only — **not betting advice**.
+
+
+## Theme & logo
+
+The UI uses the FIFA 26 black/gold theme. The header logo loads `static/logo.png`
+if present, otherwise falls back to the bundled `static/logo.svg`. To use the
+official FIFA World Cup 26 image, just save it as `static/logo.png`.
