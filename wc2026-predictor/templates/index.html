@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Cup 2026 Predictor</title>
+  <link rel="preconnect" href="https://flagcdn.com" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="ball">⚽</span>
+      <div>
+        <h1>World Cup 2026 <span>Predictor</span></h1>
+        <p class="sub">USA · Canada · Mexico — 48 teams, AI match analysis</p>
+      </div>
+    </div>
+    <div class="clock-box">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-label" id="clock-date">European time (CET)</div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="matches">Matches</button>
+    <button class="tab" data-tab="groups">Groups</button>
+    <div class="filter-wrap" id="filter-wrap">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="upcoming">Upcoming</button>
+      <button class="chip" data-filter="live">Live</button>
+      <button class="chip" data-filter="finished">Finished</button>
+    </div>
+  </nav>
+
+  <main>
+    <section id="view-matches" class="view active">
+      <div id="matches" class="matches-grid">
+        <div class="loading">Loading matches…</div>
+      </div>
+    </section>
+
+    <section id="view-groups" class="view">
+      <div id="groups" class="groups-grid">
+        <div class="loading">Loading groups…</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- AI analysis modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+      <div id="modal-body"><div class="loading">Analyzing…</div></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p id="data-source">Loading data source…</p>
+    <p>Predictions from a Poisson model whose team strengths are computed by
+       replaying real international men's results (1872–2024) from a CSV with the
+       Elo algorithm. For entertainment only — not betting advice.</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
