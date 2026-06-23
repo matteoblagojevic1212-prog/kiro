@@ -23,6 +23,17 @@ try:
 except Exception:                          # pragma: no cover - very old Python
     EU_TZ = timezone(timedelta(hours=2))   # fallback CEST
 
+# Before computing ratings, make sure the full historical dataset is present.
+# On the first online run this downloads it once (so every team gets real
+# recent form); offline it's a no-op and the bundled sample is used.
+if not os.environ.get("NO_FETCH"):
+    try:
+        import fetch_results
+        if fetch_results.ensure_dataset(timeout=15):
+            print("Using full historical dataset.")
+    except Exception:
+        pass
+
 import engine
 import live
 import ratings

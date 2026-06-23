@@ -243,8 +243,7 @@ function renderAnalysis(body, m, a) {
     '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
       '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
     '<div class="predict-banner"><div class="predict-label">MOST LIKELY SCORE</div>' +
-      '<div class="predict-score">' + pred.home + ' – ' + pred.away + '</div>' +
-      '<div class="predict-call">Goals lean: ' + pred.goals_call + ' (' + pred.goals_prob + '%)</div></div>' +
+      '<div class="predict-score">' + pred.home + ' – ' + pred.away + '</div></div>' +
     '<div class="headline">' + esc(a.headline) +
       '<br><small>Expected goals (xG): ' + esc(m.home_label) + ' ' + a.xg.home + ' — ' + a.xg.away +
       ' ' + esc(m.away_label) + '</small></div>' +

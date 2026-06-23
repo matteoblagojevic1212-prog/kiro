@@ -68,8 +68,8 @@ GROUP_FIXTURES = [
     ("2026-06-22", "22:00", "I", "France", "Iraq", 3, 0, "Philadelphia Stadium"),
     ("2026-06-23", "00:00", "I", "Norway", "Senegal", 3, 2, "New York/New Jersey Stadium"),
     ("2026-06-23", "03:00", "J", "Jordan", "Algeria", 1, 2, "San Francisco Bay Area Stadium"),
-    ("2026-06-23", "19:00", "K", "Portugal", "Uzbekistan", None, None, "Houston Stadium"),
-    ("2026-06-23", "22:00", "L", "England", "Ghana", None, None, "Boston Stadium"),
+    ("2026-06-23", "19:00", "K", "Portugal", "Uzbekistan", 5, 0, "Houston Stadium"),
+    ("2026-06-23", "22:00", "L", "England", "Ghana", 0, 0, "Boston Stadium"),
     ("2026-06-24", "01:00", "L", "Panama", "Croatia", None, None, "Toronto Stadium"),
     ("2026-06-24", "04:00", "K", "Colombia", "DR Congo", None, None, "Guadalajara Stadium"),
 

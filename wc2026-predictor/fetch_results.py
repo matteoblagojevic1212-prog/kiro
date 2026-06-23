@@ -32,25 +32,34 @@ URLS = [
 ]
 
 
-def main():
+def ensure_dataset(timeout=20):
+    """Download the full dataset once if it's missing and we're online.
+    Returns True if the full dataset is present afterwards. Safe to call on
+    every startup: it's a no-op when the file already exists or there's no
+    internet (the app then uses the bundled sample)."""
+    if os.path.isfile(OUT):
+        return True
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     for url in URLS:
         try:
-            print("Downloading:", url)
             req = urllib.request.Request(url, headers={"User-Agent": "wc2026-predictor"})
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = resp.read()
-            if not data or b"," not in data[:200]:
-                print("  -> unexpected content, trying next mirror")
-                continue
-            with open(OUT, "wb") as fh:
-                fh.write(data)
-            rows = data.count(b"\n")
-            print("Saved %d bytes (~%d matches) to %s" % (len(data), max(0, rows - 1), OUT))
-            print("Done! Now run:  python3 server.py")
-            return 0
-        except Exception as exc:  # noqa: BLE001
-            print("  -> failed:", exc)
+            if data and b"," in data[:200]:
+                with open(OUT, "wb") as fh:
+                    fh.write(data)
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def main():
+    ok = ensure_dataset(timeout=60) if not os.path.isfile(OUT) else True
+    if os.path.isfile(OUT):
+        print("Full dataset ready at", OUT)
+        print("Now run:  python3 server.py")
+        return 0
     print("\nCould not download automatically.")
     print("Manual option: download results.csv from")
     print("  https://github.com/martj42/international_results")

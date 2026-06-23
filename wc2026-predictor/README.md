@@ -66,6 +66,11 @@ Each prediction blends two readings of the teams' **past matches** from the
 over each team's last games). This feeds the scoreline, Over/Under, goalscorer
 and assist probabilities, and the analysis panel shows each team's last-5 form.
 
+On first launch the app tries to **download the full results dataset once**
+(needs internet) so every team has a real last-5; offline it uses the bundled
+sample plus the completed World Cup 2026 results. Set `NO_FETCH=1` to skip the
+download.
+
 ## Auto-filling knockout bracket
 
 As each group finishes, the **Round of 32 fills in automatically** with the real

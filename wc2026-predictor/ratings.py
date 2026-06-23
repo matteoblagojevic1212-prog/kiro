@@ -166,23 +166,51 @@ def build_ratings():
         if key in TEAMS:
             out[key] = round(rating, 1)
 
+    # Fold in completed World Cup 2026 results (real scores in the schedule) so
+    # every participating team has up-to-date strength AND recent form.
+    _fold_wc_results(out, history, meta)
+
     form = _build_form(history)
     return out, meta, form
 
 
+def _fold_wc_results(out, history, meta):
+    try:
+        from schedule import GROUP_FIXTURES
+    except Exception:
+        return
+    rows = [r for r in GROUP_FIXTURES if r[5] is not None and r[6] is not None]
+    rows.sort(key=lambda r: (r[0], r[1]))
+    for date, _t, _g, h, a, hs, as_, _v in rows:
+        ra = out.get(h, DEFAULT_ELO)
+        rb = out.get(a, DEFAULT_ELO)
+        we = _expected(ra, rb)
+        w = 1.0 if hs > as_ else (0.0 if hs < as_ else 0.5)
+        delta = 55.0 * _goal_multiplier(hs - as_) * (w - we)
+        out[h] = round(ra + delta, 1)
+        out[a] = round(rb - delta, 1)
+        history.setdefault(h, []).append((date, hs, as_, a))
+        history.setdefault(a, []).append((date, as_, hs, h))
+        meta["matches"] += 1
+
+
 def _build_form(history):
-    """Per-team recent attack/defence strength + last-5 results, by team key."""
+    """Per-team recent attack/defence strength + last-5 results, by team key.
+    Histories for the same team under different source spellings are merged."""
     def keyify(raw):
         return NAME_MAP.get(raw, raw)
+
+    merged = {}
+    for raw, recs in history.items():
+        key = keyify(raw)
+        if key in TEAMS:
+            merged.setdefault(key, []).extend(recs)
 
     form = {}
     for key in TEAMS:
         form[key] = {"attack": 1.0, "defence": 1.0, "gf": LEAGUE_AVG,
                      "ga": LEAGUE_AVG, "played": 0, "last5": []}
-    for raw, recs in history.items():
-        key = keyify(raw)
-        if key not in TEAMS:
-            continue
+    for key, recs in merged.items():
         recs.sort(key=lambda x: x[0])
         window = recs[-FORM_WINDOW:]
         gf = sum(x[1] for x in window) / len(window)
@@ -190,9 +218,9 @@ def _build_form(history):
         last5 = []
         for d, g_for, g_against, opp in recs[-5:]:
             res = "W" if g_for > g_against else ("D" if g_for == g_against else "L")
-            opp_key = keyify(opp)
+            ok = keyify(opp)
             last5.append({
-                "opp": display_name(opp_key) if opp_key in TEAMS else opp,
+                "opp": display_name(ok) if ok in TEAMS else opp,
                 "gf": g_for, "ga": g_against, "res": res, "date": d,
             })
         last5.reverse()  # most recent first
