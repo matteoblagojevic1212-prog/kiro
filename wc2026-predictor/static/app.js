@@ -145,10 +145,18 @@ function matchCard(m) {
 
 function renderMatches() {
   var wrap = document.getElementById("matches");
-  var list = state.matches.filter(function (m) { return m.status === state.filter; });
+  var list;
+  if (state.search) {
+    list = state.matches.filter(function (m) {
+      return ((m.home_label + " " + m.away_label).toLowerCase()).indexOf(state.search) !== -1;
+    });
+  } else {
+    list = state.matches.filter(function (m) { return m.status === state.filter; });
+  }
   wrap.innerHTML = "";
   if (!list.length) {
-    wrap.appendChild(el('<div class="loading">No ' + state.filter + ' matches right now.</div>'));
+    var msg = state.search ? 'No games found for "' + esc(state.search) + '".' : "No " + state.filter + " matches right now.";
+    wrap.appendChild(el('<div class="loading">' + msg + '</div>'));
     return;
   }
   list.forEach(function (m) { wrap.appendChild(matchCard(m)); });
@@ -250,22 +258,25 @@ function renderAnalysis(body, m, a) {
 
   var venueHtml = "";
   if (a.venue) {
-    var w = a.weather;
-    var kick = a.kickoff ? (" · " + esc(a.kickoff.day) + " " + esc(a.kickoff.time) + " CET") : "";
+    var w = a.weather, vi = a.venue_info || {};
+    var kick = a.kickoff ? (esc(a.kickoff.day) + " · " + esc(a.kickoff.time) + " CET") : "";
     var wline = w
       ? (w.emoji + " " + esc(w.desc) + " · " + Math.round(w.temp_max) + "° / " + Math.round(w.temp_min) + "°C")
       : "Weather forecast appears closer to kick-off.";
-    venueHtml = '<div class="panel" style="margin-top:14px"><h4>Venue &amp; weather</h4>' +
-      '<div class="venue-line">' + esc(a.venue) + kick + '</div>' +
+    venueHtml = '<div class="panel venue-panel" style="margin-top:14px"><h4>Venue &amp; weather</h4>' +
+      '<div class="venue-stadium">' + esc(vi.stadium || a.venue) + '</div>' +
+      (vi.city ? '<div class="venue-sub">' + esc(vi.city) + '</div>' : '') +
+      (vi.continent ? '<div class="venue-sub">' + esc(vi.continent) + '</div>' : '') +
+      (kick ? '<div class="venue-sub">' + kick + '</div>' : '') +
       '<div class="wx-line">' + wline + '</div></div>';
   }
 
   body.innerHTML =
     '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
       '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
-    '<div class="predict-banner"><div class="predict-label">EXPECTED GOALS (xG)</div>' +
-      '<div class="predict-score">' + a.xg.home + ' – ' + a.xg.away + '</div>' +
-      '<div class="predict-sub">' + esc(m.home_label) + ' vs ' + esc(m.away_label) + '</div></div>' +
+    '<div class="predict-banner"><div class="predict-label">HOW PREDICTABLE IS THIS GAME</div>' +
+      '<div class="predict-score">' + (a.confidence != null ? a.confidence + '%' : '–') + '</div>' +
+      '<div class="predict-sub">Predicted winner: <b>' + esc(a.winner || '–') + '</b></div></div>' +
     '<div class="panel" style="margin-bottom:14px"><h4>3 Most Probable Exact Scores</h4>' +
       '<div class="scoreline-list">' + scorelines + '</div></div>' +
     '<div class="grid-2"><div class="panel"><h4>Match Result</h4>' +
@@ -297,9 +308,41 @@ function setupTabs() {
       document.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("active"); });
       c.classList.add("active");
       state.filter = c.getAttribute("data-filter");
+      var s = document.getElementById("search");
+      if (s) s.value = "";
+      state.search = "";
       renderMatches();
     });
   });
+}
+
+function setupSearch() {
+  var s = document.getElementById("search");
+  if (!s) return;
+  s.addEventListener("input", function () {
+    state.search = s.value.trim().toLowerCase();
+    // searching applies to matches; make sure that view is showing
+    if (state.search) {
+      document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
+      var mt = document.querySelector('.tab[data-tab="matches"]');
+      if (mt) mt.classList.add("active");
+      document.getElementById("view-matches").classList.add("active");
+      document.getElementById("view-groups").classList.remove("active");
+    }
+    renderMatches();
+  });
+}
+
+function setupHeaderScroll() {
+  var bar = document.querySelector(".topbar");
+  if (!bar) return;
+  var last = 0;
+  window.addEventListener("scroll", function () {
+    var y = window.scrollY || document.documentElement.scrollTop;
+    if (y > last && y > 90) bar.classList.add("hidden");
+    else bar.classList.remove("hidden");
+    last = y;
+  }, { passive: true });
 }
 function setupModal() {
   var b = document.getElementById("modal-backdrop");
@@ -309,7 +352,7 @@ function setupModal() {
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
 }
 function init() {
-  setupTabs(); setupModal();
+  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll();
   loadMatches(); loadGroups();
   setInterval(tick, 1000);
   setInterval(function () { loadMatches(); loadGroups(); }, 20000);

@@ -50,6 +50,30 @@ _CODES = {
 _CACHE = {}
 _TTL = 3600
 
+# Venue -> location details for display
+VENUE_INFO = {
+    "New York/New Jersey Stadium": {"continent": "North America", "city": "East Rutherford, New Jersey", "stadium": "MetLife Stadium"},
+    "Los Angeles Stadium": {"continent": "North America", "city": "Inglewood, California", "stadium": "SoFi Stadium"},
+    "Dallas Stadium": {"continent": "North America", "city": "Arlington, Texas", "stadium": "AT&T Stadium"},
+    "Atlanta Stadium": {"continent": "North America", "city": "Atlanta, Georgia", "stadium": "Mercedes-Benz Stadium"},
+    "Kansas City Stadium": {"continent": "North America", "city": "Kansas City, Missouri", "stadium": "Arrowhead Stadium"},
+    "Houston Stadium": {"continent": "North America", "city": "Houston, Texas", "stadium": "NRG Stadium"},
+    "Philadelphia Stadium": {"continent": "North America", "city": "Philadelphia, Pennsylvania", "stadium": "Lincoln Financial Field"},
+    "Seattle Stadium": {"continent": "North America", "city": "Seattle, Washington", "stadium": "Lumen Field"},
+    "San Francisco Bay Area Stadium": {"continent": "North America", "city": "Santa Clara, California", "stadium": "Levi's Stadium"},
+    "Miami Stadium": {"continent": "North America", "city": "Miami Gardens, Florida", "stadium": "Hard Rock Stadium"},
+    "Boston Stadium": {"continent": "North America", "city": "Foxborough, Massachusetts", "stadium": "Gillette Stadium"},
+    "Toronto Stadium": {"continent": "North America", "city": "Toronto, Ontario", "stadium": "BMO Field"},
+    "BC Place Vancouver": {"continent": "North America", "city": "Vancouver, British Columbia", "stadium": "BC Place"},
+    "Mexico City Stadium": {"continent": "North America", "city": "Mexico City", "stadium": "Estadio Azteca"},
+    "Guadalajara Stadium": {"continent": "North America", "city": "Guadalajara, Jalisco", "stadium": "Estadio Akron"},
+    "Monterrey Stadium": {"continent": "North America", "city": "Monterrey, Nuevo Leon", "stadium": "Estadio BBVA"},
+}
+
+
+def get_venue_info(venue):
+    return VENUE_INFO.get(venue, {"continent": "", "city": "", "stadium": venue})
+
 
 def get_weather(venue, date_iso):
     coords = VENUE_COORDS.get(venue)

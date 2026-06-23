@@ -189,3 +189,23 @@ table.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .venue-line { font-size: 14px; font-weight: 500; }
 .wx-line { font-size: 14px; color: var(--gold-soft); margin-top: 6px; }
 .modal { box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(212,175,55,.12); }
+
+
+/* ---------- Header hide-on-scroll ---------- */
+.topbar { transition: transform .28s ease; will-change: transform; }
+.topbar.hidden { transform: translateY(-100%); }
+
+/* ---------- Search bar ---------- */
+.search {
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 16px; font-size: 13px; min-width: 190px; outline: none;
+}
+.search::placeholder { color: var(--muted); }
+.search:focus { border-color: var(--gold); background: #15151b; }
+
+/* ---------- Centered venue & weather ---------- */
+.venue-panel { text-align: center; }
+.venue-stadium { font-size: 17px; font-weight: 600; color: var(--text); }
+.venue-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.venue-panel .wx-line { margin-top: 10px; font-size: 15px; }

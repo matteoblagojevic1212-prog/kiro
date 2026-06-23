@@ -325,9 +325,11 @@ class Handler(BaseHTTPRequestHandler):
                     result["kickoff"] = eu_strings(mt["kickoff"])
                     try:
                         import weather
+                        result["venue_info"] = weather.get_venue_info(mt["venue"])
                         result["weather"] = weather.get_weather(
                             mt["venue"], mt["kickoff"].date().isoformat())
                     except Exception:
+                        result["venue_info"] = None
                         result["weather"] = None
                 return self._json(result)
 

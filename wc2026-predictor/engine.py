@@ -252,6 +252,14 @@ def analyze(home, away):
         result_phrase = "%s are favourites (%.0f%% to win)" % (fav, _pct(spread))
     headline = "%s. Most likely score %d-%d (%.0f%%)." % (result_phrase, mi, mj, mp)
 
+    # "How predictable is this game" = how concentrated the 1X2 outcome is.
+    # Even (33/33/33) -> ~0%, near-certain -> ~100%.
+    probs = [p_home, p_draw, p_away]
+    ent = -sum(p * math.log(p) for p in probs if p > 0)
+    confidence = round((1 - ent / math.log(3)) * 100)
+    mx = max(p_home, p_draw, p_away)
+    winner = hname if mx == p_home else (aname if mx == p_away else "Draw")
+
     return {
         "home": home,
         "away": away,
@@ -262,6 +270,8 @@ def analyze(home, away):
         "xg": {"home": round(lam_h, 2), "away": round(lam_a, 2),
                "total": round(lam_h + lam_a, 2)},
         "headline": headline,
+        "confidence": confidence,
+        "winner": winner,
         "prediction": {
             "home": mi, "away": mj, "prob": mp,
             "goals_call": goals_call, "goals_prob": goals_call_pct,
