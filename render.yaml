@@ -1,0 +1,22 @@
+# Free public hosting on Render (https://render.com).
+# Steps:
+#   1. Go to render.com and sign in with GitHub (free).
+#   2. New +  ->  Blueprint  ->  pick the "kiro" repo  ->  Apply.
+#   3. Render reads this file, builds, and gives you a public https URL.
+#      Open that URL on your phone from anywhere (no wifi needed).
+#
+# The free instance sleeps after ~15 min idle and wakes on the next visit
+# (first load may take ~30s).
+services:
+  - type: web
+    name: wc2026-predictor
+    runtime: python
+    rootDir: wc2026-predictor
+    plan: free
+    buildCommand: "echo no build needed"
+    startCommand: "python server.py"
+    envVars:
+      - key: NO_BROWSER
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.5"

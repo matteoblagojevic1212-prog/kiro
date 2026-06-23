@@ -278,13 +278,27 @@ def _open_browser(url):
     threading.Timer(1.0, go).start()
 
 
+def _lan_ip():
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
+
 def main():
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     url = "http://localhost:%d" % PORT
+    lan = _lan_ip()
     print("=" * 60)
     print(" World Cup 2026 Predictor is running")
-    print(" Opening your browser at:  %s" % url)
-    print(" (If it doesn't open, paste that address into your browser.)")
+    print(" On this computer:        %s" % url)
+    if lan:
+        print(" On your phone (same wifi): http://%s:%d" % (lan, PORT))
     print(" Press Ctrl+C to stop.")
     print("=" * 60)
     _open_browser(url)
