@@ -20,7 +20,7 @@ result including a home-field advantage when the match is not on neutral ground.
 import csv
 import os
 
-from data import TEAMS
+from data import TEAMS, display_name
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FULL_CSV = os.path.join(HERE, "dataset", "results.csv")
@@ -28,6 +28,8 @@ SAMPLE_CSV = os.path.join(HERE, "dataset", "results.sample.csv")
 
 DEFAULT_ELO = 1500.0
 HOME_ADV = 65.0
+LEAGUE_AVG = 1.35       # typical goals per team per international match
+FORM_WINDOW = 15        # how many recent matches define "form"
 
 # Map dataset names -> our team keys where they differ.
 NAME_MAP = {
@@ -105,6 +107,7 @@ def build_ratings():
 
     # ratings dict is keyed by RAW dataset name (so cross-games propagate too)
     ratings = {}
+    history = {}   # raw name -> list of (date, gf, ga, opponent_raw)
 
     def prior_for(raw_name):
         key = NAME_MAP.get(raw_name, raw_name)
@@ -150,6 +153,8 @@ def build_ratings():
             delta = k * g * (w_home - we_home)
             ratings[h] = ra + delta
             ratings[a] = rb - delta
+            history.setdefault(h, []).append((r.get("date", ""), hs, as_, a))
+            history.setdefault(a, []).append((r.get("date", ""), as_, hs, h))
             meta["matches"] += 1
 
     # collapse raw dataset names down to our team keys
@@ -160,11 +165,48 @@ def build_ratings():
         key = NAME_MAP.get(raw_name, raw_name)
         if key in TEAMS:
             out[key] = round(rating, 1)
-    return out, meta
+
+    form = _build_form(history)
+    return out, meta, form
+
+
+def _build_form(history):
+    """Per-team recent attack/defence strength + last-5 results, by team key."""
+    def keyify(raw):
+        return NAME_MAP.get(raw, raw)
+
+    form = {}
+    for key in TEAMS:
+        form[key] = {"attack": 1.0, "defence": 1.0, "gf": LEAGUE_AVG,
+                     "ga": LEAGUE_AVG, "played": 0, "last5": []}
+    for raw, recs in history.items():
+        key = keyify(raw)
+        if key not in TEAMS:
+            continue
+        recs.sort(key=lambda x: x[0])
+        window = recs[-FORM_WINDOW:]
+        gf = sum(x[1] for x in window) / len(window)
+        ga = sum(x[2] for x in window) / len(window)
+        last5 = []
+        for d, g_for, g_against, opp in recs[-5:]:
+            res = "W" if g_for > g_against else ("D" if g_for == g_against else "L")
+            opp_key = keyify(opp)
+            last5.append({
+                "opp": display_name(opp_key) if opp_key in TEAMS else opp,
+                "gf": g_for, "ga": g_against, "res": res, "date": d,
+            })
+        last5.reverse()  # most recent first
+        form[key] = {
+            "attack": round(gf / LEAGUE_AVG, 3),
+            "defence": round(ga / LEAGUE_AVG, 3),
+            "gf": round(gf, 2), "ga": round(ga, 2),
+            "played": len(recs), "last5": last5,
+        }
+    return form
 
 
 # Build once at import.
-RATINGS, RATINGS_META = build_ratings()
+RATINGS, RATINGS_META, FORM = build_ratings()
 
 
 def get_elo(team_name):
@@ -173,6 +215,13 @@ def get_elo(team_name):
         return RATINGS[team_name]
     rec = TEAMS.get(team_name)
     return float(rec["elo"]) if rec else DEFAULT_ELO
+
+
+def get_form(team_name):
+    """Recent-form record for a team key (attack/defence/last5)."""
+    return FORM.get(team_name, {"attack": 1.0, "defence": 1.0,
+                                "gf": LEAGUE_AVG, "ga": LEAGUE_AVG,
+                                "played": 0, "last5": []})
 
 
 if __name__ == "__main__":

@@ -222,6 +222,23 @@ function renderAnalysis(body, m, a) {
   var scorers = a.scorers.map(playerRow).join("");
   var assists = a.assisters.map(playerRow).join("");
 
+  var fh = a.form ? a.form.home : null, fa = a.form ? a.form.away : null;
+  function badges(f) {
+    if (!f || !f.last5 || !f.last5.length) return '<span class="note">no recent data</span>';
+    return f.last5.map(function (x) {
+      return '<span class="frm ' + x.res + '" title="vs ' + esc(x.opp) + ' ' + x.gf + '-' + x.ga + '">' + x.res + '</span>';
+    }).join("");
+  }
+  function formPanel(label, f) {
+    if (!f) return "";
+    return '<div class="panel"><h4>' + esc(label) + ' · recent form</h4>' +
+      '<div class="form-badges">' + badges(f) + '</div>' +
+      '<div class="kv"><span>Avg scored</span><b>' + f.gf + '</b></div>' +
+      '<div class="kv"><span>Avg conceded</span><b>' + f.ga + '</b></div></div>';
+  }
+  var formHtml = '<div class="grid-2" style="margin-top:14px">' +
+    formPanel(m.home_label, fh) + formPanel(m.away_label, fa) + '</div>';
+
   body.innerHTML =
     '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
       '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
@@ -241,6 +258,7 @@ function renderAnalysis(body, m, a) {
       '</div><div class="panel"><h4>Goals Markets</h4>' +
       bar("Over 1.5", g.over_1_5) + bar("Over 2.5", g.over_2_5) + bar("Over 3.5", g.over_3_5) +
       bar("Both teams score", a.btts.yes) + '</div></div>' +
+    formHtml +
     '<div class="grid-2" style="margin-top:14px"><div class="panel"><h4>Likely Goalscorers</h4>' +
       '<ul class="plist">' + scorers + '</ul></div><div class="panel"><h4>Likely Assists</h4>' +
       '<ul class="plist">' + assists + '</ul></div></div>';

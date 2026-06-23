@@ -22,11 +22,12 @@ import math
 import random
 
 from data import team, display_name, TEAMS
-from ratings import get_elo
+from ratings import get_elo, get_form
 
 MAX_GOALS = 8          # scoreline grid is 0..8 for each team
 BASE_TOTAL = 2.55      # baseline combined expected goals (even match)
 ELO_PER_GOAL = 135.0   # Elo gap that equals ~1 goal of supremacy
+LEAGUE_AVG = 1.35      # typical goals per team (for the form model)
 
 # When False (the default) the app NEVER invents a final score: finished matches
 # show only official results (entered in schedule.py or supplied by the live
@@ -43,17 +44,28 @@ def _poisson_pmf(k, lam):
 
 
 def expected_goals(home, away):
-    """Return (lambda_home, lambda_away) from the two teams' Elo ratings."""
+    """
+    Expected goals for each side, blending two views of the teams' PAST matches:
+      * Elo supremacy  - long-run strength from results 1872-2026
+      * Recent form    - attack/defence over each team's last games
+    The more recent matches we have for both teams, the more form is weighted.
+    """
     eh = get_elo(home)
     ea = get_elo(away)
-    supremacy = (eh - ea) / ELO_PER_GOAL
-    supremacy = max(-3.0, min(3.0, supremacy))
-
-    # Bigger mismatches produce slightly more total goals (blow-outs happen).
+    supremacy = max(-3.0, min(3.0, (eh - ea) / ELO_PER_GOAL))
     total = BASE_TOTAL + 0.30 * abs(supremacy)
+    elo_h = total / 2.0 + supremacy / 2.0
+    elo_a = total / 2.0 - supremacy / 2.0
 
-    lam_h = total / 2.0 + supremacy / 2.0
-    lam_a = total / 2.0 - supremacy / 2.0
+    fh = get_form(home)
+    fa = get_form(away)
+    form_h = LEAGUE_AVG * fh["attack"] * fa["defence"]
+    form_a = LEAGUE_AVG * fa["attack"] * fh["defence"]
+
+    have = min(fh["played"], fa["played"])
+    w = 0.45 if have >= 5 else (0.25 if have >= 1 else 0.0)
+    lam_h = (1 - w) * elo_h + w * form_h
+    lam_a = (1 - w) * elo_a + w * form_a
     return max(0.18, min(5.5, lam_h)), max(0.12, min(5.5, lam_a))
 
 
@@ -256,6 +268,7 @@ def analyze(home, away):
         "clean_sheet": {"home": _pct(cs_home), "away": _pct(cs_away)},
         "scorers": scorers,
         "assisters": assisters,
+        "form": {"home": get_form(home), "away": get_form(away)},
     }
 
 

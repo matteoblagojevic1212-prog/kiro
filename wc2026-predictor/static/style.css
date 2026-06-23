@@ -165,3 +165,11 @@ table.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .note { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
 .footer { color: var(--muted); font-size: 12px; text-align: center; padding: 24px; border-top: 1px solid var(--line); max-width: 720px; margin: 0 auto; line-height: 1.6; }
 .footer code { color: var(--gold-soft); }
+
+
+/* ---------- Recent form badges ---------- */
+.form-badges { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.frm { width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+.frm.W { background: var(--green); }
+.frm.D { background: #6b6b76; }
+.frm.L { background: var(--live); }

@@ -51,15 +51,20 @@ Click **🤖 Analyze with AI** on any match to get:
 
 ## Live scores
 
-- Out of the box, matches show a **clock-driven live view**: a running minute
-  (`67'`, `HT`, `FT`) and the score building up over the 90 minutes, all from
-  your device clock — no internet or key required.
-- For **real** live scores (like Google), add a free API key from
-  [football-data.org](https://www.football-data.org/client/register) and run:
-  - macOS/Linux: `LIVE_API_KEY=your_key python3 server.py`
-  - Windows: `set LIVE_API_KEY=your_key` then `python server.py`
-  The app then pulls actual live scores over your wifi and overlays them. If the
-  key or network is unavailable it silently falls back to the clock-driven view.
+- **Real live scores with no key needed.** The app pulls live World Cup scores
+  from ESPN's public scoreboard over your internet connection and overlays the
+  running minute, current score and `FT` automatically. If you're offline it
+  falls back to a clock-driven view; it never invents a final score.
+- **Optional alternative provider:** add a free football-data.org key if you
+  prefer it: `LIVE_API_KEY=your_key python3 server.py`.
+- To turn the live feed off entirely: `NO_LIVE=1 python3 server.py`.
+
+## Form-aware predictions
+
+Each prediction blends two readings of the teams' **past matches** from the
+1872–2026 dataset: long-run Elo strength, and **recent form** (attack/defence
+over each team's last games). This feeds the scoreline, Over/Under, goalscorer
+and assist probabilities, and the analysis panel shows each team's last-5 form.
 
 ## Auto-filling knockout bracket
 
