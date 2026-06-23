@@ -209,19 +209,21 @@ function openAnalysis(m) {
 }
 
 function renderAnalysis(body, m, a) {
-  var res = a.result, g = a.goals;
+  var res = a.result, g = a.goals, pred = a.prediction;
 
   var scorelines = a.top_scorelines.map(function (s, i) {
-    var isBest = (s.home === a.best_fit_scoreline.home && s.away === a.best_fit_scoreline.away);
+    var isBest = (s.home === pred.home && s.away === pred.away);
     return '<div class="scoreline' + (isBest ? ' best' : '') + '">' +
       '<div class="sc">' + s.home + '-' + s.away + '</div>' +
       '<div class="pr">' + s.prob + '%</div>' +
-      (isBest ? '<div class="tagline">AI BEST FIT</div>' : '') +
+      (isBest ? '<div class="tagline">TOP PICK</div>' : '') +
       '</div>';
   }).join("");
 
   var scorers = a.scorers.map(function (p) { return playerRow(p, "g"); }).join("");
   var assists = a.assisters.map(function (p) { return playerRow(p, "a"); }).join("");
+
+  var callClass = pred.goals_call.indexOf("Over") === 0 ? "over" : "under";
 
   body.innerHTML =
     '<div class="analysis-head">' +
@@ -229,13 +231,25 @@ function renderAnalysis(body, m, a) {
       '<div class="vs">VS</div>' +
       teamCol(m.away, m.away_label, m.away_iso) +
     '</div>' +
-    '<div class="headline"><span class="ai-tag">AI PREDICTION:</span> ' + esc(a.headline) +
+
+    '<div class="predict-banner">' +
+      '<div class="predict-label">🤖 AI PREDICTED SCORE</div>' +
+      '<div class="predict-score">' + pred.home + ' – ' + pred.away + '</div>' +
+      '<div class="predict-call ' + callClass + '">' +
+        (pred.tight ? "Goals: too close to call" : pred.goals_call + " goals · " + pred.goals_prob + "%") +
+      '</div>' +
+    '</div>' +
+
+    '<div class="headline">' + esc(a.headline) +
       '<br><small>Expected goals (xG): ' + esc(m.home_label) + ' ' + a.xg.home +
       ' — ' + a.xg.away + ' ' + esc(m.away_label) + ' · total ' + a.xg.total + '</small></div>' +
 
     '<div class="panel" style="margin-bottom:14px">' +
-      '<h4>3 Most Probable Scorelines</h4>' +
+      '<h4>3 Most Probable Exact Scores</h4>' +
       '<div class="scoreline-list">' + scorelines + '</div>' +
+      '<p class="note">These are the single most likely exact scores — each is only ' +
+      'a slice of all possibilities, so they don\'t add up to 100%. The "Over/Under" ' +
+      'figures below add up the probability of every scoreline on each side.</p>' +
     '</div>' +
 
     '<div class="grid-2">' +

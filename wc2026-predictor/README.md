@@ -18,6 +18,9 @@ python3 server.py
 
 Then open **http://localhost:8000** in your browser.
 
+> When you run `python3 server.py` it now **opens your browser automatically**.
+> (Set the env var `NO_BROWSER=1` to disable that.)
+
 - macOS / Linux: you can also run `./run.sh`
 - Windows: double-click `run.bat` (or run `py server.py`)
 - To use a different port: `PORT=9000 python3 server.py`

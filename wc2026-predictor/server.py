@@ -82,7 +82,7 @@ def serialize_match(mt, now):
         "score": None,
     }
     if status in ("live", "finished") and mt["home"] and mt["away"]:
-        res = engine.simulated_result(mt)
+        res = mt.get("result") or engine.simulated_result(mt)
         if res:
             out["score"] = {"home": res[0], "away": res[1]}
     return out
@@ -207,14 +207,31 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "internal", "detail": str(exc)}, 500)
 
 
+def _open_browser(url):
+    """Open the app in the default browser shortly after the server starts."""
+    if os.environ.get("NO_BROWSER"):
+        return
+    import threading
+    import webbrowser
+
+    def go():
+        try:
+            webbrowser.open_new_tab(url)
+        except Exception:
+            pass
+    threading.Timer(1.0, go).start()
+
+
 def main():
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     url = "http://localhost:%d" % PORT
     print("=" * 60)
     print(" World Cup 2026 Predictor is running")
-    print(" Open this in your browser:  %s" % url)
+    print(" Opening your browser at:  %s" % url)
+    print(" (If it doesn't open, paste that address into your browser.)")
     print(" Press Ctrl+C to stop.")
     print("=" * 60)
+    _open_browser(url)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

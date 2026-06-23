@@ -286,3 +286,22 @@ table.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .kv b { color: var(--text); }
 
 .footer { color: var(--muted); font-size: 12px; text-align: center; padding: 24px; border-top: 1px solid var(--line); max-width: 720px; margin: 0 auto; line-height: 1.6; }
+
+
+
+/* ---------- AI predicted-score banner ---------- */
+.predict-banner {
+  margin: 16px 0 6px;
+  text-align: center;
+  background: linear-gradient(120deg, rgba(79,124,255,.18), rgba(25,195,125,.18));
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+}
+.predict-label { font-size: 12px; letter-spacing: 1px; color: var(--accent2); font-weight: 800; }
+.predict-score { font-size: 44px; font-weight: 900; line-height: 1.1; letter-spacing: 4px; }
+.predict-call { font-size: 13px; font-weight: 700; margin-top: 4px; display: inline-block;
+  padding: 3px 12px; border-radius: 999px; }
+.predict-call.over { color: #19c37d; background: rgba(25,195,125,.15); }
+.predict-call.under { color: #ffb020; background: rgba(255,176,32,.15); }
+.note { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }

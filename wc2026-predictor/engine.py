@@ -21,7 +21,7 @@ will contain 3+ goals (never a 1-0 / 0-0).
 import math
 import random
 
-from data import team
+from data import team, display_name
 from ratings import get_elo
 
 MAX_GOALS = 8          # scoreline grid is 0..8 for each team
@@ -191,22 +191,47 @@ def analyze(home, away):
     scorers = sorted(sc_h + sc_a, key=lambda x: x["prob"], reverse=True)[:6]
     assisters = sorted(as_h + as_a, key=lambda x: x["prob"], reverse=True)[:5]
 
-    # Headline narrative (kept consistent with the markets above).
-    fav = home if p_home >= p_away else away
-    fav_p = _pct(max(p_home, p_away))
-    goals_call = "Over 2.5" if favour_over else "Under 2.5"
-    headline = ("%s favoured (%.0f%% to win) - model leans %s goals. "
-                "Best-fit scoreline %d-%d.") % (
-        fav, fav_p, goals_call, bi, bj)
+    hname, aname = display_name(home), display_name(away)
+
+    # The single headline scoreline is the best-fit one, and the goals "lean"
+    # is read DIRECTLY off that scoreline's total -> they can never contradict.
+    # (e.g. it can never say "Over 2.5" while showing a 1-0 / 1-1 prediction.)
+    fit_total = bi + bj
+    leans_over = fit_total >= 3
+    goals_call = "Over 2.5" if leans_over else "Under 2.5"
+    over25 = _over_prob(m, 2.5)
+    lean_pct = _pct(over25 if leans_over else (1 - over25))
+    tight = abs(over25 - 0.5) < 0.06
+
+    # Winner / result wording.
+    spread = max(p_home, p_draw, p_away)
+    if p_draw == spread:
+        result_phrase = "evenly matched - a draw is the single most likely result"
+        fav = None
+    else:
+        fav = hname if p_home >= p_away else aname
+        result_phrase = "%s are favourites (%.0f%% to win)" % (fav, _pct(spread))
+
+    lean_phrase = ("the goals market is a coin-flip" if tight
+                   else "leans %s goals (%.0f%%)" % (goals_call, lean_pct))
+    headline = ("%s. The model's most likely scoreline is %d-%d, so it %s."
+                % (result_phrase[0].upper() + result_phrase[1:], bi, bj, lean_phrase))
 
     return {
         "home": home,
         "away": away,
+        "home_name": hname,
+        "away_name": aname,
         "home_iso": team(home)["iso"],
         "away_iso": team(away)["iso"],
         "xg": {"home": round(lam_h, 2), "away": round(lam_a, 2),
                "total": round(lam_h + lam_a, 2)},
         "headline": headline,
+        "prediction": {
+            "home": bi, "away": bj, "prob": bp,
+            "goals_call": goals_call, "goals_prob": lean_pct,
+            "tight": tight,
+        },
         "best_fit_scoreline": {"home": bi, "away": bj, "prob": bp,
                                "leans": goals_call},
         "result": {
@@ -279,7 +304,7 @@ def compute_standings(groups, schedule, now):
             continue
         if mt["kickoff"] > now:
             continue  # not played yet
-        res = simulated_result(mt)
+        res = mt.get("result") or simulated_result(mt)
         if not res:
             continue
         hg, ag = res
