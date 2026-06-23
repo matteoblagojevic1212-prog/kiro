@@ -28,6 +28,12 @@ MAX_GOALS = 8          # scoreline grid is 0..8 for each team
 BASE_TOTAL = 2.55      # baseline combined expected goals (even match)
 ELO_PER_GOAL = 135.0   # Elo gap that equals ~1 goal of supremacy
 
+# When False (the default) the app NEVER invents a final score: finished matches
+# show only official results (entered in schedule.py or supplied by the live
+# API). Group tables and the bracket therefore reflect real results only and
+# update after each match as its official score is added.
+PREDICT_UNPLAYED = False
+
 
 # ---------------------------------------------------------------------------
 # Poisson helpers
@@ -298,9 +304,11 @@ def compute_standings(groups, schedule, now):
             continue
         if mt["kickoff"] > now:
             continue  # not played yet
-        res = mt.get("result") or simulated_result(mt)
+        res = mt.get("result")
+        if not res and PREDICT_UNPLAYED:
+            res = simulated_result(mt)
         if not res:
-            continue
+            continue  # played but no official score yet -> not counted
         hg, ag = res
         h, a = mt["home"], mt["away"]
         th, ta = tables[g][h], tables[g][a]
@@ -355,7 +363,7 @@ def goal_events(match, home_key=None, away_key=None):
     by the match id so it never changes between page loads.
     """
     res = match.get("result")
-    if not res:
+    if not res and PREDICT_UNPLAYED:
         res = simulated_result_for(match["id"], home_key or match.get("home"),
                                    away_key or match.get("away"))
     if not res:
@@ -476,7 +484,7 @@ def resolve_bracket(groups, schedule, now):
                     key=lambda x: x["fifa_no"]):
         h = resolve(m["home_code"]); a = resolve(m["away_code"])
         result = None
-        if h and a and m["kickoff"] <= now:
+        if h and a and m["kickoff"] <= now and PREDICT_UNPLAYED:
             hs, as_, win, lose = _ko_result(m["id"], h, a)
             winner_of[m["fifa_no"]] = win
             loser_of[m["fifa_no"]] = lose

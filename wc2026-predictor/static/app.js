@@ -69,7 +69,7 @@ function tick() {
     if (scEl) {
       if (m.live_real && m.score) {
         scEl.textContent = m.score.home + " - " + m.score.away; // real feed
-      } else if (info.min !== undefined) {
+      } else if (m.events && m.events.length && info.min !== undefined) {
         var sc = scoreFromEvents(m.events, info.min);
         scEl.textContent = sc.home + " - " + sc.away;
       }
@@ -96,9 +96,17 @@ function midCol(m) {
       '<div class="countdown" data-kickoff="' + m.kickoff.iso_utc + '"></div></div>';
   }
   if (m.status === "live") {
+    var liveScore = (m.score) ? (m.score.home + " - " + m.score.away)
+                              : (m.events && m.events.length ? "0 - 0" : "–");
     return '<div class="mid-col">' +
-      '<div class="score" id="sc-' + m.id + '">0 - 0</div>' +
+      '<div class="score" id="sc-' + m.id + '">' + liveScore + '</div>' +
       '<div class="minute" id="min-' + m.id + '">…</div></div>';
+  }
+  if (m.awaiting) {
+    return '<div class="mid-col">' +
+      '<div class="kick-day">' + esc(m.kickoff.day) + '</div>' +
+      '<div class="vs">VS</div>' +
+      '<div class="ft-badge">awaiting score</div></div>';
   }
   var sc = m.score ? (m.score.home + " - " + m.score.away) : "–";
   return '<div class="mid-col">' +

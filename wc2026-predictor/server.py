@@ -93,12 +93,14 @@ def serialize_match(mt, now, resolved=None):
 
     if status in ("live", "finished") and home_key and away_key:
         res = (r["result"] if r and r["result"] else mt.get("result"))
-        if not res:
+        if not res and engine.PREDICT_UNPLAYED:
             res = engine.simulated_result_for(mt["id"], home_key, away_key)
         if res:
             out["score"] = {"home": res[0], "away": res[1]}
-        out["events"] = engine.goal_events(
-            dict(mt, result=res), home_key, away_key)
+            out["events"] = engine.goal_events(
+                dict(mt, result=res), home_key, away_key)
+        elif status == "finished":
+            out["awaiting"] = True   # played, official score not entered yet
     return out
 
 
