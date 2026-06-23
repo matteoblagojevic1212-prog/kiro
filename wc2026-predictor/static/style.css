@@ -209,3 +209,11 @@ table.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .venue-stadium { font-size: 17px; font-weight: 600; color: var(--text); }
 .venue-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
 .venue-panel .wx-line { margin-top: 10px; font-size: 15px; }
+
+
+/* ---------- Predicted winner + confidence ---------- */
+.predict-winner { font-size: 34px; font-weight: 700; letter-spacing: .4px; line-height: 1.15; }
+.predict-conf { font-size: 13px; font-weight: 600; margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 999px; }
+.conf-high { color: var(--green); background: rgba(47,174,107,.16); }
+.conf-medium { color: var(--gold-soft); background: rgba(212,175,55,.16); }
+.conf-low { color: #ff7a8c; background: rgba(255,59,92,.14); }

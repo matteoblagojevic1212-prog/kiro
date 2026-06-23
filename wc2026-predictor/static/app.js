@@ -259,24 +259,21 @@ function renderAnalysis(body, m, a) {
   var venueHtml = "";
   if (a.venue) {
     var w = a.weather, vi = a.venue_info || {};
-    var kick = a.kickoff ? (esc(a.kickoff.day) + " · " + esc(a.kickoff.time) + " CET") : "";
     var wline = w
       ? (w.emoji + " " + esc(w.desc) + " · " + Math.round(w.temp_max) + "° / " + Math.round(w.temp_min) + "°C")
       : "Weather forecast appears closer to kick-off.";
     venueHtml = '<div class="panel venue-panel" style="margin-top:14px"><h4>Venue &amp; weather</h4>' +
       '<div class="venue-stadium">' + esc(vi.stadium || a.venue) + '</div>' +
-      (vi.city ? '<div class="venue-sub">' + esc(vi.city) + '</div>' : '') +
-      (vi.continent ? '<div class="venue-sub">' + esc(vi.continent) + '</div>' : '') +
-      (kick ? '<div class="venue-sub">' + kick + '</div>' : '') +
       '<div class="wx-line">' + wline + '</div></div>';
   }
 
   body.innerHTML =
     '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
       '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
-    '<div class="predict-banner"><div class="predict-label">HOW PREDICTABLE IS THIS GAME</div>' +
-      '<div class="predict-score">' + (a.confidence != null ? a.confidence + '%' : '–') + '</div>' +
-      '<div class="predict-sub">Predicted winner: <b>' + esc(a.winner || '–') + '</b></div></div>' +
+    '<div class="predict-banner"><div class="predict-label">PREDICTED WINNER</div>' +
+      '<div class="predict-winner">' + esc(a.winner || 'Draw') + '</div>' +
+      '<div class="predict-conf conf-' + (a.confidence_label || 'Medium').toLowerCase() + '">Confidence: ' +
+      esc(a.confidence_label || 'Medium') + '</div></div>' +
     '<div class="panel" style="margin-bottom:14px"><h4>3 Most Probable Exact Scores</h4>' +
       '<div class="scoreline-list">' + scorelines + '</div></div>' +
     '<div class="grid-2"><div class="panel"><h4>Match Result</h4>' +

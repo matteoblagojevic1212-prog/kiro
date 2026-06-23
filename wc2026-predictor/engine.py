@@ -259,6 +259,7 @@ def analyze(home, away):
     confidence = round((1 - ent / math.log(3)) * 100)
     mx = max(p_home, p_draw, p_away)
     winner = hname if mx == p_home else (aname if mx == p_away else "Draw")
+    conf_label = "High" if confidence >= 50 else ("Medium" if confidence >= 22 else "Low")
 
     return {
         "home": home,
@@ -271,6 +272,7 @@ def analyze(home, away):
                "total": round(lam_h + lam_a, 2)},
         "headline": headline,
         "confidence": confidence,
+        "confidence_label": conf_label,
         "winner": winner,
         "prediction": {
             "home": mi, "away": mj, "prob": mp,
