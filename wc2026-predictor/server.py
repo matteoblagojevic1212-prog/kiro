@@ -298,6 +298,7 @@ class Handler(BaseHTTPRequestHandler):
                 mid = (qs.get("id") or [None])[0]
                 home = (qs.get("home") or [None])[0]
                 away = (qs.get("away") or [None])[0]
+                mt = None
                 if mid:
                     mt = find_match(mid)
                     if not mt:
@@ -318,7 +319,17 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "unknown home team"}, 400)
                 if away not in TEAMS:
                     return self._json({"error": "unknown away team"}, 400)
-                return self._json(engine.analyze(home, away))
+                result = engine.analyze(home, away)
+                if mt:
+                    result["venue"] = mt["venue"]
+                    result["kickoff"] = eu_strings(mt["kickoff"])
+                    try:
+                        import weather
+                        result["weather"] = weather.get_weather(
+                            mt["venue"], mt["kickoff"].date().isoformat())
+                    except Exception:
+                        result["weather"] = None
+                return self._json(result)
 
             return self._send(404, "Not found", "text/plain")
         except BrokenPipeError:

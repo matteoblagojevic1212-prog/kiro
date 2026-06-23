@@ -52,8 +52,11 @@ function tick() {
     var d = Math.floor(s / 86400); s -= d * 86400;
     var h = Math.floor(s / 3600); s -= h * 3600;
     var mi = Math.floor(s / 60); s -= mi * 60;
-    n.textContent = "in " + (d > 0 ? d + "d " : "") +
-      String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+    var out;
+    if (d > 0) out = "in " + d + "d " + h + "h";
+    else if (h > 0) out = "in " + h + "h " + mi + "m";
+    else out = "in " + mi + "m " + String(s).padStart(2, "0") + "s";
+    n.textContent = out;
   });
   state.matches.forEach(function (m) {
     if (m.status !== "live") return;
@@ -204,6 +207,7 @@ function openAnalysis(m) {
   var body = document.getElementById("modal-body");
   body.innerHTML = '<div class="loading">Analysing ' + esc(m.home_label) + ' vs ' + esc(m.away_label) + '…</div>';
   backdrop.classList.add("open");
+  document.body.classList.add("modal-open");
   fetch("/api/analyze?id=" + encodeURIComponent(m.id)).then(function (r) { return r.json(); })
     .then(function (a) {
       if (a.error) { body.innerHTML = '<div class="loading">' + esc(a.error) + '</div>'; return; }
@@ -222,6 +226,11 @@ function renderAnalysis(body, m, a) {
   var scorers = a.scorers.map(playerRow).join("");
   var assists = a.assisters.map(playerRow).join("");
 
+  // show whichever side of each goals line is more likely (Over or Under)
+  function gl(line, over, under) {
+    return (over >= under) ? bar("Over " + line, over) : bar("Under " + line, under);
+  }
+
   var fh = a.form ? a.form.home : null, fa = a.form ? a.form.away : null;
   function badges(f) {
     if (!f || !f.last5 || !f.last5.length) return '<span class="note">no recent data</span>';
@@ -239,28 +248,36 @@ function renderAnalysis(body, m, a) {
   var formHtml = '<div class="grid-2" style="margin-top:14px">' +
     formPanel(m.home_label, fh) + formPanel(m.away_label, fa) + '</div>';
 
+  var venueHtml = "";
+  if (a.venue) {
+    var w = a.weather;
+    var kick = a.kickoff ? (" · " + esc(a.kickoff.day) + " " + esc(a.kickoff.time) + " CET") : "";
+    var wline = w
+      ? (w.emoji + " " + esc(w.desc) + " · " + Math.round(w.temp_max) + "° / " + Math.round(w.temp_min) + "°C")
+      : "Weather forecast appears closer to kick-off.";
+    venueHtml = '<div class="panel" style="margin-top:14px"><h4>Venue &amp; weather</h4>' +
+      '<div class="venue-line">' + esc(a.venue) + kick + '</div>' +
+      '<div class="wx-line">' + wline + '</div></div>';
+  }
+
   body.innerHTML =
     '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
       '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
-    '<div class="predict-banner"><div class="predict-label">MOST LIKELY SCORE</div>' +
-      '<div class="predict-score">' + pred.home + ' – ' + pred.away + '</div></div>' +
-    '<div class="headline">' + esc(a.headline) +
-      '<br><small>Expected goals (xG): ' + esc(m.home_label) + ' ' + a.xg.home + ' — ' + a.xg.away +
-      ' ' + esc(m.away_label) + '</small></div>' +
+    '<div class="predict-banner"><div class="predict-label">EXPECTED GOALS (xG)</div>' +
+      '<div class="predict-score">' + a.xg.home + ' – ' + a.xg.away + '</div>' +
+      '<div class="predict-sub">' + esc(m.home_label) + ' vs ' + esc(m.away_label) + '</div></div>' +
     '<div class="panel" style="margin-bottom:14px"><h4>3 Most Probable Exact Scores</h4>' +
-      '<div class="scoreline-list">' + scorelines + '</div>' +
-      '<p class="note">Each exact score is just one outcome, so they don\'t add up to 100%. ' +
-      'A low score can be "most likely" even when Over 2.5 is the more likely goals market — ' +
-      'because Over 2.5 adds up many higher scores together.</p></div>' +
+      '<div class="scoreline-list">' + scorelines + '</div></div>' +
     '<div class="grid-2"><div class="panel"><h4>Match Result</h4>' +
       bar(m.home_label + " win", res.home_win) + bar("Draw", res.draw) + bar(m.away_label + " win", res.away_win) +
       '</div><div class="panel"><h4>Goals Markets</h4>' +
-      bar("Over 1.5", g.over_1_5) + bar("Over 2.5", g.over_2_5) + bar("Over 3.5", g.over_3_5) +
+      gl("1.5", g.over_1_5, g.under_1_5) + gl("2.5", g.over_2_5, g.under_2_5) +
       bar("Both teams score", a.btts.yes) + '</div></div>' +
     formHtml +
     '<div class="grid-2" style="margin-top:14px"><div class="panel"><h4>Likely Goalscorers</h4>' +
       '<ul class="plist">' + scorers + '</ul></div><div class="panel"><h4>Likely Assists</h4>' +
-      '<ul class="plist">' + assists + '</ul></div></div>';
+      '<ul class="plist">' + assists + '</ul></div></div>' +
+    venueHtml;
 }
 
 /* ----- wiring ----- */
@@ -286,21 +303,14 @@ function setupTabs() {
 }
 function setupModal() {
   var b = document.getElementById("modal-backdrop");
-  document.getElementById("modal-close").addEventListener("click", function () { b.classList.remove("open"); });
-  b.addEventListener("click", function (e) { if (e.target === b) b.classList.remove("open"); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") b.classList.remove("open"); });
-}
-function loadInfo() {
-  fetch("/api/info").then(function (r) { return r.json(); }).then(function (d) {
-    var el = document.getElementById("data-source");
-    if (el && d.matches_analyzed > 0)
-      el.innerHTML = "Ratings built from <b>" + d.matches_analyzed.toLocaleString() +
-        "</b> real international matches (" + esc(d.data_source) + ").";
-  }).catch(function () {});
+  function close() { b.classList.remove("open"); document.body.classList.remove("modal-open"); }
+  document.getElementById("modal-close").addEventListener("click", close);
+  b.addEventListener("click", function (e) { if (e.target === b) close(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
 }
 function init() {
   setupTabs(); setupModal();
-  loadMatches(); loadGroups(); loadInfo();
+  loadMatches(); loadGroups();
   setInterval(tick, 1000);
   setInterval(function () { loadMatches(); loadGroups(); }, 20000);
 }

@@ -188,6 +188,28 @@ def _player_markets(name, lam):
 # ---------------------------------------------------------------------------
 # Public: full analysis for one match
 # ---------------------------------------------------------------------------
+def _pick_players(hlist, alist, home_team, away_team, n=5):
+    """Top n players across both teams, guaranteeing at least one per team."""
+    hlist = sorted(hlist, key=lambda x: x["prob"], reverse=True)
+    alist = sorted(alist, key=lambda x: x["prob"], reverse=True)
+    chosen = sorted(hlist + alist, key=lambda x: x["prob"], reverse=True)[:n]
+
+    def has(team):
+        return any(p["team"] == team for p in chosen)
+
+    if hlist and not has(home_team):
+        for i in range(len(chosen) - 1, -1, -1):
+            if chosen[i]["team"] == away_team:
+                chosen[i] = hlist[0]
+                break
+    if alist and not has(away_team):
+        for i in range(len(chosen) - 1, -1, -1):
+            if chosen[i]["team"] == home_team:
+                chosen[i] = alist[0]
+                break
+    return sorted(chosen, key=lambda x: x["prob"], reverse=True)[:n]
+
+
 def analyze(home, away):
     lam_h, lam_a = expected_goals(home, away)
     m = score_matrix(lam_h, lam_a)
@@ -206,8 +228,8 @@ def analyze(home, away):
 
     sc_h, as_h = _player_markets(home, lam_h)
     sc_a, as_a = _player_markets(away, lam_a)
-    scorers = sorted(sc_h + sc_a, key=lambda x: x["prob"], reverse=True)[:6]
-    assisters = sorted(as_h + as_a, key=lambda x: x["prob"], reverse=True)[:5]
+    scorers = _pick_players(sc_h, sc_a, home, away, 5)
+    assisters = _pick_players(as_h, as_a, home, away, 5)
 
     hname, aname = display_name(home), display_name(away)
 
