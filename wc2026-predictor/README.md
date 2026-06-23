@@ -77,6 +77,22 @@ As each group finishes, the **Round of 32 fills in automatically** with the real
 group winners, runners-up and the 8 best third-placed teams. Knockout winners
 propagate forward as those matches complete, so the bracket updates in real time.
 
+## Auto-updating (no re-downloading)
+
+The app keeps itself current on its own:
+
+- A background task polls the live feed every ~45s. When a game **finishes**, its
+  real score is saved to `dataset/live_results.json` and reused on every later
+  run — so a result is fetched **once** and never re-downloaded or re-typed.
+- Each new result automatically **recomputes the standings, the knockout bracket
+  and every team's last-5 form** (the CSV is parsed once and cached, so refreshes
+  are instant).
+- The full historical dataset is downloaded **once** on first online run; after
+  that it's reused from disk.
+
+Net effect: leave it running and scores, tables, form and predictions all update
+themselves — you never have to download everything again.
+
 ## How the predictions work (and why they're consistent)
 
 Team strength is **computed from real match data**, not hard-coded. The file

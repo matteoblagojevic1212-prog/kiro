@@ -96,16 +96,11 @@ def _which_csv():
     return None, "none"
 
 
-def build_ratings():
-    """
-    Returns (ratings_by_team_key, meta).
-    Ratings start from the baseline priors in data.py so unknown / rarely
-    seen teams remain sensible, then every historical result nudges them.
-    """
+def _parse_csv():
+    """Parse the historical CSV once. Returns (ratings_raw, history_raw, meta)
+    keyed by RAW dataset names. Cached so live refreshes are cheap."""
     path, kind = _which_csv()
     meta = {"source": kind, "path": path, "matches": 0, "rows": 0}
-
-    # ratings dict is keyed by RAW dataset name (so cross-games propagate too)
     ratings = {}
     history = {}   # raw name -> list of (date, gf, ga, opponent_raw)
 
@@ -125,7 +120,6 @@ def build_ratings():
             for r in csv.DictReader(fh):
                 rows.append(r)
         meta["rows"] = len(rows)
-        # process oldest -> newest
         rows.sort(key=lambda r: r.get("date", ""))
         for r in rows:
             try:
@@ -136,62 +130,50 @@ def build_ratings():
             if not h or not a:
                 continue
             neutral = str(r.get("neutral", "")).strip().upper() in ("TRUE", "1", "YES")
-
             ra, rb = get(h), get(a)
-            ra_eff = ra + (0 if neutral else HOME_ADV)
-            we_home = _expected(ra_eff, rb)
-
-            if hs > as_:
-                w_home = 1.0
-            elif hs < as_:
-                w_home = 0.0
-            else:
-                w_home = 0.5
-
-            k = _k_factor(r.get("tournament"))
-            g = _goal_multiplier(hs - as_)
-            delta = k * g * (w_home - we_home)
+            we_home = _expected(ra + (0 if neutral else HOME_ADV), rb)
+            w_home = 1.0 if hs > as_ else (0.0 if hs < as_ else 0.5)
+            delta = _k_factor(r.get("tournament")) * _goal_multiplier(hs - as_) * (w_home - we_home)
             ratings[h] = ra + delta
             ratings[a] = rb - delta
             history.setdefault(h, []).append((r.get("date", ""), hs, as_, a))
             history.setdefault(a, []).append((r.get("date", ""), as_, hs, h))
             meta["matches"] += 1
-
-    # collapse raw dataset names down to our team keys
-    out = {}
-    for key, rec in TEAMS.items():
-        out[key] = float(rec["elo"])  # baseline fallback
-    for raw_name, rating in ratings.items():
-        key = NAME_MAP.get(raw_name, raw_name)
-        if key in TEAMS:
-            out[key] = round(rating, 1)
-
-    # Fold in completed World Cup 2026 results (real scores in the schedule) so
-    # every participating team has up-to-date strength AND recent form.
-    _fold_wc_results(out, history, meta)
-
-    form = _build_form(history)
-    return out, meta, form
+    return ratings, history, meta
 
 
-def _fold_wc_results(out, history, meta):
+def _wc_static_results():
+    """Completed World Cup results hard-coded in the schedule."""
     try:
         from schedule import GROUP_FIXTURES
     except Exception:
-        return
-    rows = [r for r in GROUP_FIXTURES if r[5] is not None and r[6] is not None]
-    rows.sort(key=lambda r: (r[0], r[1]))
-    for date, _t, _g, h, a, hs, as_, _v in rows:
-        ra = out.get(h, DEFAULT_ELO)
-        rb = out.get(a, DEFAULT_ELO)
+        return []
+    return [(r[0], r[3], r[4], r[5], r[6]) for r in GROUP_FIXTURES
+            if r[5] is not None and r[6] is not None]
+
+
+def _assemble(results):
+    """Build (ratings_by_key, form, meta) from the cached CSV base plus a list
+    of recent results: (date, home_key, away_key, home_goals, away_goals)."""
+    out = {key: float(rec["elo"]) for key, rec in TEAMS.items()}
+    for raw, rating in _BASE_RATINGS_RAW.items():
+        key = NAME_MAP.get(raw, raw)
+        if key in TEAMS:
+            out[key] = round(rating, 1)
+
+    history = {raw: list(recs) for raw, recs in _BASE_HISTORY_RAW.items()}
+    for date, h, a, hs, as_ in sorted(results, key=lambda r: r[0]):
+        ra = out.get(h, DEFAULT_ELO); rb = out.get(a, DEFAULT_ELO)
         we = _expected(ra, rb)
         w = 1.0 if hs > as_ else (0.0 if hs < as_ else 0.5)
         delta = 55.0 * _goal_multiplier(hs - as_) * (w - we)
-        out[h] = round(ra + delta, 1)
-        out[a] = round(rb - delta, 1)
+        out[h] = round(ra + delta, 1); out[a] = round(rb - delta, 1)
         history.setdefault(h, []).append((date, hs, as_, a))
         history.setdefault(a, []).append((date, as_, hs, h))
-        meta["matches"] += 1
+
+    meta = dict(_BASE_META)
+    meta["matches"] = _BASE_META["matches"] + len(results)
+    return out, _build_form(history), meta
 
 
 def _build_form(history):
@@ -233,8 +215,18 @@ def _build_form(history):
     return form
 
 
-# Build once at import.
-RATINGS, RATINGS_META, FORM = build_ratings()
+# Parse the historical CSV once (the expensive step), then assemble.
+_BASE_RATINGS_RAW, _BASE_HISTORY_RAW, _BASE_META = _parse_csv()
+RATINGS, FORM, RATINGS_META = _assemble(_wc_static_results())
+
+
+def refresh(results):
+    """Recompute ratings + form from the cached CSV base plus the given recent
+    results list: (date, home_key, away_key, home_goals, away_goals). Cheap, so
+    the server can call it whenever new finished scores arrive (live or stored)."""
+    global RATINGS, FORM, RATINGS_META
+    RATINGS, FORM, RATINGS_META = _assemble(results)
+    return RATINGS_META
 
 
 def get_elo(team_name):

@@ -37,8 +37,61 @@ if not os.environ.get("NO_FETCH"):
 import engine
 import live
 import ratings
+import results_store
 from data import GROUPS, TEAMS, team
 from schedule import SCHEDULE
+
+
+# ---------------------------------------------------------------------------
+# Self-updating results: persist finished scores, refresh ratings/form/standings
+# ---------------------------------------------------------------------------
+_STORE = results_store.load()
+
+
+def _apply_store_to_schedule():
+    for m in SCHEDULE:
+        rec = _STORE.get(m["id"])
+        if rec and len(rec) == 2:
+            m["result"] = (rec[0], rec[1])
+
+
+def _schedule_results():
+    """Recent results (group matches with a known score) for ratings/form."""
+    res = []
+    for m in SCHEDULE:
+        if m["group"] and m.get("result"):
+            res.append((m["kickoff"].date().isoformat(), m["home"], m["away"],
+                        m["result"][0], m["result"][1]))
+    return res
+
+
+def sync_live():
+    """Pull the live feed, persist any newly finished scores, and recompute
+    ratings/form so the whole app updates on its own."""
+    try:
+        feed = live.fetch_live()
+    except Exception:
+        feed = {}
+    changed = False
+    for m in SCHEDULE:
+        if not (m["home"] and m["away"]):
+            continue
+        info = feed.get((m["home"], m["away"]))
+        if info and info.get("status") == "FINISHED" \
+                and info.get("home") is not None and info.get("away") is not None:
+            nr = (info["home"], info["away"])
+            if m.get("result") != nr:
+                m["result"] = nr
+                _STORE[m["id"]] = [nr[0], nr[1]]
+                changed = True
+    if changed:
+        results_store.save(_STORE)
+    ratings.refresh(_schedule_results())
+
+
+# Apply any previously stored results immediately, and fold them into ratings.
+_apply_store_to_schedule()
+ratings.refresh(_schedule_results())
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
@@ -303,10 +356,24 @@ def _lan_ip():
         return None
 
 
+def _bg_updater():
+    import time
+    while True:
+        try:
+            sync_live()
+        except Exception:
+            pass
+        time.sleep(45)
+
+
 def main():
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     url = "http://localhost:%d" % PORT
     lan = _lan_ip()
+    # keep results, ratings, form and standings updating on their own
+    if not os.environ.get("NO_LIVE"):
+        import threading
+        threading.Thread(target=_bg_updater, daemon=True).start()
     print("=" * 60)
     print(" World Cup 2026 Predictor is running")
     print(" On this computer:        %s" % url)
