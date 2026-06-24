@@ -242,3 +242,16 @@ T.zh.history = "分析记录"; T.zh.nohist = "暂无分析";
 T.pt.history = "Histórico de análises"; T.pt.nohist = "Sem análises";
 T.de.history = "Analyseverlauf"; T.de.nohist = "Noch keine Analysen";
 T.hr.history = "Povijest analiza"; T.hr.nohist = "Još nema analiza";
+
+
+// "Files" section labels
+T.en.files = "Files"; T.en.openfolder = "Open install folder";
+T.it.files = "File"; T.it.openfolder = "Apri cartella di installazione";
+T.fr.files = "Fichiers"; T.fr.openfolder = "Ouvrir le dossier d'installation";
+T.es.files = "Archivos"; T.es.openfolder = "Abrir carpeta de instalación";
+T.ru.files = "Файлы"; T.ru.openfolder = "Открыть папку установки";
+T.ar.files = "الملفات"; T.ar.openfolder = "فتح مجلد التثبيت";
+T.zh.files = "文件"; T.zh.openfolder = "打开安装文件夹";
+T.pt.files = "Ficheiros"; T.pt.openfolder = "Abrir pasta de instalação";
+T.de.files = "Dateien"; T.de.openfolder = "Installationsordner öffnen";
+T.hr.files = "Datoteke"; T.hr.openfolder = "Otvori instalacijsku mapu";

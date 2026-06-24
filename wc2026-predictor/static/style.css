@@ -310,3 +310,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display:
   cursor: pointer; padding: 0;
 }
 .clear-hist:hover { border-color: var(--live); color: var(--live); }
+
+
+/* ---------- Install folder path ---------- */
+.folder-path { font-size: 11px; color: var(--muted); margin-top: 8px; word-break: break-all; }

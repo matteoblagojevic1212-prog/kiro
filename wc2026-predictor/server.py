@@ -108,6 +108,21 @@ def now_utc():
     return datetime.now(UTC)
 
 
+def _open_folder():
+    """Open the install/extract directory in the OS file manager."""
+    import subprocess
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(HERE)  # noqa: B606
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", HERE])
+        else:
+            subprocess.Popen(["xdg-open", HERE])
+        return True
+    except Exception:
+        return False
+
+
 def _parse_iso(s):
     """Parse an ESPN ISO date (possibly ending in Z) to an aware UTC datetime."""
     if not s:
@@ -287,6 +302,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/time":
                 now = now_utc()
                 return self._json({"server_eu": eu_strings(now), "tz": "Europe/Brussels"})
+
+            if path == "/api/open-folder":
+                ok = _open_folder()
+                return self._json({"ok": ok, "path": HERE})
 
             if path == "/api/competitions":
                 return self._json({"competitions": competitions.list_competitions()})

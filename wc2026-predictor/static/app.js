@@ -497,6 +497,13 @@ function setupMenu() {
     localStorage.removeItem("wc_history");
     renderHistory();
   };
+  var of = document.getElementById("open-folder");
+  if (of) of.onclick = function () {
+    fetch("/api/open-folder").then(function (r) { return r.json(); }).then(function (d) {
+      var fp = document.getElementById("folder-path");
+      if (fp) fp.textContent = d.path || "";
+    }).catch(function () {});
+  };
   renderLangs(); renderHistory();
 }
 
