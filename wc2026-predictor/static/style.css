@@ -37,6 +37,7 @@ body.modal-open { overflow: hidden; }
 .topbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 18px;
   padding: 18px 26px;
   background: linear-gradient(180deg, #0b0b0e, #060608);
@@ -240,12 +241,12 @@ table.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; z-index: 60; }
 .drawer-overlay.open { display: block; }
 .drawer {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 320px; max-width: 86vw; z-index: 61;
-  background: linear-gradient(180deg, #101015, #0a0a0e); border-right: 1px solid rgba(212,175,55,.3);
-  padding: 22px; transform: translateX(-104%); transition: transform .25s ease; overflow-y: auto;
+  position: fixed; top: 0; right: 0; bottom: 0; width: 320px; max-width: 86vw; z-index: 61;
+  background: linear-gradient(180deg, #101015, #0a0a0e); border-left: 1px solid rgba(212,175,55,.3);
+  padding: 22px; transform: translateX(104%); transition: transform .25s ease; overflow-y: auto;
 }
 .drawer.open { transform: translateX(0); }
-[dir="rtl"] .drawer { left: auto; right: 0; border-right: 0; border-left: 1px solid rgba(212,175,55,.3); transform: translateX(104%); }
+[dir="rtl"] .drawer { right: auto; left: 0; border-left: 0; border-right: 1px solid rgba(212,175,55,.3); transform: translateX(-104%); }
 [dir="rtl"] .drawer.open { transform: translateX(0); }
 .drawer h3 { margin: 4px 0 16px; font-weight: 600; }
 .drawer-sec { margin-bottom: 22px; }

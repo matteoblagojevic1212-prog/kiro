@@ -403,7 +403,7 @@ function renderAnalysis(body, m, a) {
           var iso = gg.team === "home" ? m.home_iso : m.away_iso;
           return '<li><span class="goal-min">' + gg.minute + "'</span>" +
             '<img class="flag-sm" src="' + flagUrl(iso, "w40") + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-            '<span>' + esc(gg.player) + '</span></li>';
+            '<span>' + (gg.player ? esc(gg.player) : t("goalsT")) + '</span></li>';
         }).join("")
       : '<li><span class="note">' + t("nogoals") + '</span></li>';
     body.innerHTML = head +

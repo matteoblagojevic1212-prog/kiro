@@ -446,30 +446,21 @@ def simulated_result_for(match_id, home, away):
     return sample(lam_h), sample(lam_a)
 
 
-def scorer_timeline(match_id, home, away, result):
-    """Goal-by-goal timeline (minute + likely scorer) for a finished match.
-    Scorers are attributed to each side's likely goal-getters, seeded so it's
-    stable. (Exact scorer data isn't in the historical results dataset.)"""
+def scorer_timeline(match_id, home, away, result, real=None):
+    """Goal-by-goal timeline (minute + scorer) for a finished match.
+    Uses REAL scorers from the live feed when provided; otherwise it lists the
+    goals by minute WITHOUT inventing player names (player left blank)."""
+    if real:
+        out = []
+        for s in real:
+            if s.get("team") in ("home", "away"):
+                out.append({"team": s["team"], "minute": s.get("minute") or 0,
+                            "player": s.get("player") or ""})
+        out.sort(key=lambda x: x["minute"])
+        return out
+    # No real scorer data -> show goals by minute with no attributed name.
     evs = goal_events({"id": match_id, "result": result}, home, away)
-    out = []
-    for i, e in enumerate(evs):
-        side = e["team"]
-        tkey = home if side == "home" else away
-        players = team(tkey)["players"]
-        name = "?"
-        if players:
-            total = sum(p[1] for p in players) or 1
-            rng = random.Random("sc" + match_id + str(i))
-            r = rng.random() * total
-            cum = 0.0
-            name = players[0][0]
-            for p in players:
-                cum += p[1]
-                if r <= cum:
-                    name = p[0]
-                    break
-        out.append({"team": side, "minute": e["minute"], "player": name})
-    return out
+    return [{"team": e["team"], "minute": e["minute"], "player": ""} for e in evs]
 
 
 def _ko_result(match_id, home, away):

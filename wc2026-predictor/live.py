@@ -19,7 +19,8 @@ import urllib.request
 
 from data import TEAMS, DISPLAY
 
-ESPN_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
+ESPN_URL = ("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/"
+            "scoreboard?dates=20260611-20260719")
 FD_URL = "https://api.football-data.org/v4/competitions/WC/matches"
 _CACHE = {"ts": 0, "data": None}
 _CACHE_SECONDS = 20
@@ -75,11 +76,26 @@ def _fetch_espn():
             hsc = int(home.get("score")); asc = int(away.get("score"))
         except (TypeError, ValueError):
             hsc = asc = None
+        # real goalscorers (minute + player) from the scoring plays
+        home_id = (home.get("team") or {}).get("id")
+        scorers = []
+        for d in (comp.get("details") or []):
+            if not d.get("scoringPlay"):
+                continue
+            ath = d.get("athletesInvolved") or []
+            pname = ath[0].get("displayName") if ath else None
+            tid = (d.get("team") or {}).get("id")
+            scorers.append({
+                "team": "home" if str(tid) == str(home_id) else "away",
+                "minute": _minute((d.get("clock") or {}).get("displayValue")),
+                "player": pname,
+            })
         out[(hk, ak)] = {
             "status": status, "home": hsc, "away": asc,
             "minute": _minute((ev.get("status") or {}).get("displayClock")),
             "clock": (ev.get("status") or {}).get("displayClock"),
             "detail": stype.get("shortDetail") or stype.get("detail"),
+            "scorers": scorers,
         }
     return out
 

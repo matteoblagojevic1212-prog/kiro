@@ -47,6 +47,7 @@ from schedule import SCHEDULE
 # Self-updating results: persist finished scores, refresh ratings/form/standings
 # ---------------------------------------------------------------------------
 _STORE = results_store.load()
+_SCORERS = {}   # match id -> real goal scorers from the live feed
 
 
 def _apply_store_to_schedule():
@@ -81,6 +82,8 @@ def sync_live():
         if info and info.get("status") == "FINISHED" \
                 and info.get("home") is not None and info.get("away") is not None:
             nr = (info["home"], info["away"])
+            if info.get("scorers"):
+                _SCORERS[m["id"]] = info["scorers"]
             if m.get("result") != nr:
                 m["result"] = nr
                 _STORE[m["id"]] = [nr[0], nr[1]]
@@ -387,7 +390,7 @@ class Handler(BaseHTTPRequestHandler):
                         result["finished"] = True
                         result["score"] = {"home": mt["result"][0], "away": mt["result"][1]}
                         result["goal_timeline"] = engine.scorer_timeline(
-                            mt["id"], home, away, mt["result"])
+                            mt["id"], home, away, mt["result"], _SCORERS.get(mt["id"]))
                     try:
                         import weather
                         result["venue_info"] = weather.get_venue_info(mt["venue"])
