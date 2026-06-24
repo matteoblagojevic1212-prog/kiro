@@ -9,54 +9,65 @@
 </head>
 <body>
   <header class="topbar">
+    <button id="menu-btn" class="menu-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
     <div class="brand">
       <img class="logo" src="/static/logo.png" alt="World Cup 2026"
            onerror="this.onerror=null;this.src='/static/logo.svg'" />
       <div class="brand-text">
         <h1>World Cup 2026</h1>
-        <p class="sub">Predictor &amp; live tracker</p>
+        <p class="sub" data-i18n="subtitle">Predictor &amp; live tracker</p>
       </div>
     </div>
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="matches">Matches</button>
-    <button class="tab" data-tab="groups">Groups</button>
+    <button class="tab active" data-tab="matches" data-i18n="matches">Matches</button>
+    <button class="tab" data-tab="groups" data-i18n="groups">Groups</button>
     <div class="filter-wrap" id="filter-wrap">
-      <button class="chip active" data-filter="upcoming">Upcoming</button>
-      <button class="chip" data-filter="live">Live</button>
-      <button class="chip" data-filter="finished">Finished</button>
-      <input id="search" class="search" type="text" placeholder="Search a team…"
-             autocomplete="off" autocorrect="off" autocapitalize="off"
-             spellcheck="false" inputmode="search" />
+      <button class="chip active" data-filter="upcoming" data-i18n="upcoming">Upcoming</button>
+      <button class="chip" data-filter="live" data-i18n="live">Live</button>
+      <button class="chip" data-filter="finished" data-i18n="finished">Finished</button>
+      <input id="search" class="search" type="text" data-i18n-ph="search" placeholder="Search a team…"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
     </div>
   </nav>
 
   <main>
     <section id="view-matches" class="view active">
-      <div id="matches" class="matches-grid">
-        <div class="loading">Loading matches…</div>
-      </div>
+      <div id="matches" class="matches-grid"><div class="loading">Loading…</div></div>
     </section>
-
     <section id="view-groups" class="view">
-      <div id="groups" class="groups-grid">
-        <div class="loading">Loading groups…</div>
-      </div>
+      <div id="groups" class="groups-grid"><div class="loading">Loading…</div></div>
     </section>
   </main>
 
   <div class="modal-backdrop" id="modal-backdrop">
     <div class="modal" role="dialog" aria-modal="true">
       <button class="modal-close" id="modal-close" aria-label="Close">×</button>
-      <div id="modal-body"><div class="loading">Analyzing…</div></div>
+      <div id="modal-body"></div>
     </div>
   </div>
 
-  <footer class="footer">
-    <p>World Cup 2026 Predictor</p>
-  </footer>
+  <!-- Slide-in menu: account + language -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <button class="drawer-close" id="drawer-close" aria-label="Close">×</button>
+    <h3 data-i18n="menu">Menu</h3>
+    <section class="drawer-sec">
+      <h4 data-i18n="account">Account</h4>
+      <div id="account-area"></div>
+    </section>
+    <section class="drawer-sec">
+      <h4 data-i18n="language">Language</h4>
+      <div id="lang-list" class="lang-list"></div>
+    </section>
+  </aside>
 
+  <footer class="footer"><p>World Cup 2026 Predictor</p></footer>
+
+  <script src="/static/i18n.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

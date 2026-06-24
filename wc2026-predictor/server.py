@@ -203,6 +203,10 @@ def _apply_live_overlay(matches):
             m["live_real"] = True
         if info.get("minute") is not None:
             m["live_minute"] = info["minute"]
+        if info.get("clock"):
+            m["live_clock"] = info["clock"]
+        if info.get("detail"):
+            m["live_detail"] = info["detail"]
 
 
 def find_match(mid):

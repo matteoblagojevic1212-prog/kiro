@@ -69,6 +69,7 @@ def _fetch_espn():
         if not hk or not ak:
             continue
         state = (((ev.get("status") or {}).get("type")) or {}).get("state")
+        stype = ((ev.get("status") or {}).get("type")) or {}
         status = {"in": "IN_PLAY", "post": "FINISHED"}.get(state)
         try:
             hsc = int(home.get("score")); asc = int(away.get("score"))
@@ -77,6 +78,8 @@ def _fetch_espn():
         out[(hk, ak)] = {
             "status": status, "home": hsc, "away": asc,
             "minute": _minute((ev.get("status") or {}).get("displayClock")),
+            "clock": (ev.get("status") or {}).get("displayClock"),
+            "detail": stype.get("shortDetail") or stype.get("detail"),
         }
     return out
 

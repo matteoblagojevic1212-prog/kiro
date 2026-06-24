@@ -252,14 +252,13 @@ def analyze(home, away):
         result_phrase = "%s are favourites (%.0f%% to win)" % (fav, _pct(spread))
     headline = "%s. Most likely score %d-%d (%.0f%%)." % (result_phrase, mi, mj, mp)
 
-    # "How predictable is this game" = how concentrated the 1X2 outcome is.
-    # Even (33/33/33) -> ~0%, near-certain -> ~100%.
+    # Confidence in the predicted winner, from how strong the favourite outcome is.
     probs = [p_home, p_draw, p_away]
     ent = -sum(p * math.log(p) for p in probs if p > 0)
-    confidence = round((1 - ent / math.log(3)) * 100)
     mx = max(p_home, p_draw, p_away)
     winner = hname if mx == p_home else (aname if mx == p_away else "Draw")
-    conf_label = "High" if confidence >= 50 else ("Medium" if confidence >= 22 else "Low")
+    confidence = round(mx * 100)
+    conf_label = "High" if mx >= 0.46 else ("Medium" if mx >= 0.35 else "Low")
 
     return {
         "home": home,

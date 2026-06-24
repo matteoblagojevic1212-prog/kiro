@@ -22,14 +22,41 @@ function starSvg() {
   return '<svg class="star" viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="M12 2l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 17.8 5.9 21l1.3-6.7-5-4.6 6.8-.8z"/></svg>';
 }
+function weatherIcon(cat) {
+  var c = '<circle cx="12" cy="12" r="5" fill="#f6c945"/>';
+  var sun = '<g stroke="#f6c945" stroke-width="2" stroke-linecap="round">' +
+    '<line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/>' +
+    '<line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/>' +
+    '<line x1="4" y1="4" x2="6" y2="6"/><line x1="18" y1="18" x2="20" y2="20"/>' +
+    '<line x1="20" y1="4" x2="18" y2="6"/><line x1="6" y1="18" x2="4" y2="20"/></g>';
+  var cloud = '<path d="M7 18h9a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.3A3.6 3.6 0 0 0 7 18z" fill="#cfd3e0"/>';
+  var inner = {
+    sunny: sun + c,
+    partly: sun + '<path d="M7 19h9a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6 1.2A3.3 3.3 0 0 0 7 19z" fill="#cfd3e0"/>',
+    cloudy: cloud,
+    fog: cloud + '<g stroke="#9aa3b2" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="21" x2="15" y2="21"/><line x1="9" y1="23" x2="19" y2="23"/></g>',
+    rain: cloud + '<g stroke="#5aa9ff" stroke-width="2" stroke-linecap="round"><line x1="8" y1="20" x2="7" y2="23"/><line x1="12" y1="20" x2="11" y2="23"/><line x1="16" y1="20" x2="15" y2="23"/></g>',
+    snow: cloud + '<g fill="#dbe6ff"><circle cx="8" cy="21" r="1"/><circle cx="12" cy="22" r="1"/><circle cx="16" cy="21" r="1"/></g>',
+    thunder: cloud + '<path d="M12 19l-3 4h2.2l-1 3 3.8-4.5H11.8L12 19z" fill="#f6c945"/>'
+  };
+  return '<svg class="wx-icon" viewBox="0 0 24 24" aria-hidden="true">' + (inner[cat] || cloud) + '</svg>';
+}
 
 /* ----- live clock math (drives the Google-style minute + score) ----- */
-function liveInfo(koMs, now) {
+function liveInfo(koMs, now, opts) {
+  opts = opts || {};
   var el = (now - koMs) / 60000; // minutes since kickoff
   if (el < 0) return { phase: "pre" };
-  if (el <= 45) return { phase: "1h", min: Math.max(1, Math.ceil(el)), label: Math.max(1, Math.ceil(el)) + "'" };
-  if (el <= 60) return { phase: "ht", min: 45, label: "HT" };
-  if (el <= 105) { var m = Math.min(90, 45 + Math.ceil(el - 60)); return { phase: "2h", min: m, label: m + "'" }; }
+  if (el <= 45) { var a = Math.max(1, Math.ceil(el)); return { phase: "1h", min: a, label: a + "'" }; }
+  if (el <= 47) return { phase: "1h", min: 45, label: "45+" + Math.ceil(el - 45) + "'" };
+  if (el <= 62) return { phase: "ht", min: 45, label: "Half time" };
+  if (el <= 107) { var m = Math.min(90, 45 + Math.ceil(el - 62)); return { phase: "2h", min: m, label: m + "'" }; }
+  if (el <= 110) return { phase: "2h", min: 90, label: "90+" + Math.ceil(el - 107) + "'" };
+  // After 90+stoppage: knockouts level go to extra time, then penalties
+  if (opts.knockout && opts.level && opts.hasScore) {
+    if (el <= 125) { var e = Math.min(120, 90 + Math.ceil(el - 110)); return { phase: "et", min: e, label: e + "' ET" }; }
+    return { phase: "pens", min: 120, label: "Penalties" };
+  }
   return { phase: "ft", min: 120, label: "FT" };
 }
 function scoreFromEvents(events, matchMinute) {
@@ -61,22 +88,27 @@ function tick() {
   state.matches.forEach(function (m) {
     if (m.status !== "live") return;
     var koMs = new Date(m.kickoff.iso_utc).getTime();
-    var info = liveInfo(koMs, now);
+    var hasScore = !!(m.events && m.events.length) || !!m.live_real;
+    var curScore = null;
+    if (m.live_real && m.score) curScore = m.score;
     var minEl = document.getElementById("min-" + m.id);
     var scEl = document.getElementById("sc-" + m.id);
+    // figure out the score first (needed for extra-time logic)
+    var info = liveInfo(koMs, Date.now(), { knockout: !m.group });
+    var sc = curScore || (m.events && m.events.length ? scoreFromEvents(m.events, info.min) : null);
+    info = liveInfo(koMs, Date.now(), {
+      knockout: !m.group, hasScore: hasScore,
+      level: sc ? (sc.home === sc.away) : false
+    });
     if (minEl) {
-      var label = (m.live_minute != null) ? (m.live_minute + "'") : (info.label || "LIVE");
+      var label;
+      if ((m.live_detail && /half|ht\b/i.test(m.live_detail)) || info.phase === "ht") label = t("ht");
+      else if (m.live_clock) label = m.live_clock;
+      else label = info.label || "LIVE";
       minEl.textContent = label;
-      minEl.className = "minute" + (info.phase === "ht" ? " ht" : "");
+      minEl.className = "minute" + (/half/i.test(label) || info.phase === "ht" ? " ht" : "");
     }
-    if (scEl) {
-      if (m.live_real && m.score) {
-        scEl.textContent = m.score.home + " - " + m.score.away; // real feed
-      } else if (m.events && m.events.length && info.min !== undefined) {
-        var sc = scoreFromEvents(m.events, info.min);
-        scEl.textContent = sc.home + " - " + sc.away;
-      }
-    }
+    if (scEl && sc) scEl.textContent = sc.home + " - " + sc.away;
   });
 }
 
@@ -109,18 +141,18 @@ function midCol(m) {
     return '<div class="mid-col">' +
       '<div class="kick-day">' + esc(m.kickoff.day) + '</div>' +
       '<div class="vs">VS</div>' +
-      '<div class="ft-badge">awaiting score</div></div>';
+      '<div class="ft-badge">' + t("awaiting") + '</div></div>';
   }
   var sc = m.score ? (m.score.home + " - " + m.score.away) : "–";
   return '<div class="mid-col">' +
     '<div class="kick-day">' + esc(m.kickoff.day) + '</div>' +
     '<div class="score">' + esc(sc) + '</div>' +
-    '<div class="ft-badge">FULL TIME</div></div>';
+    '<div class="ft-badge">' + t("ft") + '</div></div>';
 }
 
 
 function matchCard(m) {
-  var statusText = m.status === "live" ? "LIVE" : m.status.toUpperCase();
+  var statusText = t(m.status);
   var card = el(
     '<div class="match-card">' +
       '<div class="match-top">' +
@@ -134,12 +166,12 @@ function matchCard(m) {
       '</div>' +
       '<div class="venue">' + esc(m.venue) + ' · ' + esc(m.kickoff.time) + ' CET</div>' +
       '<button class="analyze-btn" ' + (m.analyzable ? '' : 'disabled') + '>' +
-        starSvg() + '<span>Analyse with AI</span></button>' +
+        starSvg() + '<span>' + t("analyse") + '</span></button>' +
     '</div>'
   );
   var btn = card.querySelector(".analyze-btn");
   if (m.analyzable) btn.addEventListener("click", function () { openAnalysis(m); });
-  else btn.querySelector("span").textContent = "Teams to be decided";
+  else btn.querySelector("span").textContent = t("tbd");
   return card;
 }
 
@@ -229,29 +261,26 @@ function renderAnalysis(body, m, a) {
   var scorelines = a.top_scorelines.map(function (s) {
     var best = (s.home === pred.home && s.away === pred.away);
     return '<div class="scoreline' + (best ? ' best' : '') + '"><div class="sc">' + s.home + '-' + s.away +
-      '</div><div class="pr">' + s.prob + '%</div>' + (best ? '<div class="tagline">MOST LIKELY</div>' : '') + '</div>';
+      '</div><div class="pr">' + s.prob + '%</div>' + (best ? '<div class="tagline">' + t("likely") + '</div>' : '') + '</div>';
   }).join("");
   var scorers = a.scorers.map(playerRow).join("");
   var assists = a.assisters.map(playerRow).join("");
-
-  // show whichever side of each goals line is more likely (Over or Under)
   function gl(line, over, under) {
-    return (over >= under) ? bar("Over " + line, over) : bar("Under " + line, under);
+    return (over >= under) ? bar(t("over") + " " + line, over) : bar(t("under") + " " + line, under);
   }
-
   var fh = a.form ? a.form.home : null, fa = a.form ? a.form.away : null;
   function badges(f) {
-    if (!f || !f.last5 || !f.last5.length) return '<span class="note">no recent data</span>';
+    if (!f || !f.last5 || !f.last5.length) return '<span class="note">' + t("norecent") + '</span>';
     return f.last5.map(function (x) {
       return '<span class="frm ' + x.res + '" title="vs ' + esc(x.opp) + ' ' + x.gf + '-' + x.ga + '">' + x.res + '</span>';
     }).join("");
   }
   function formPanel(label, f) {
     if (!f) return "";
-    return '<div class="panel"><h4>' + esc(label) + ' · recent form</h4>' +
+    return '<div class="panel"><h4>' + esc(label) + ' · ' + t("form") + '</h4>' +
       '<div class="form-badges">' + badges(f) + '</div>' +
-      '<div class="kv"><span>Avg scored</span><b>' + f.gf + '</b></div>' +
-      '<div class="kv"><span>Avg conceded</span><b>' + f.ga + '</b></div></div>';
+      '<div class="kv"><span>' + t("scored") + '</span><b>' + f.gf + '</b></div>' +
+      '<div class="kv"><span>' + t("conceded") + '</span><b>' + f.ga + '</b></div></div>';
   }
   var formHtml = '<div class="grid-2" style="margin-top:14px">' +
     formPanel(m.home_label, fh) + formPanel(m.away_label, fa) + '</div>';
@@ -260,30 +289,32 @@ function renderAnalysis(body, m, a) {
   if (a.venue) {
     var w = a.weather, vi = a.venue_info || {};
     var wline = w
-      ? (w.emoji + " " + esc(w.desc) + " · " + Math.round(w.temp_max) + "° / " + Math.round(w.temp_min) + "°C")
-      : "Weather forecast appears closer to kick-off.";
-    venueHtml = '<div class="panel venue-panel" style="margin-top:14px"><h4>Venue &amp; weather</h4>' +
+      ? (weatherIcon(w.cat) + ' <span>' + esc(w.desc) + " · " + Math.round(w.temp_max) + "° / " + Math.round(w.temp_min) + "°C</span>")
+      : t("wxpending");
+    venueHtml = '<div class="panel venue-panel" style="margin-top:14px"><h4>' + t("venue") + '</h4>' +
       '<div class="venue-stadium">' + esc(vi.stadium || a.venue) + '</div>' +
       '<div class="wx-line">' + wline + '</div></div>';
   }
 
+  var winnerTxt = (a.winner === "Draw") ? t("draw") : (a.winner || t("draw"));
+  var cl = a.confidence_label || "Medium";
+
   body.innerHTML =
     '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
       '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
-    '<div class="predict-banner"><div class="predict-label">PREDICTED WINNER</div>' +
-      '<div class="predict-winner">' + esc(a.winner || 'Draw') + '</div>' +
-      '<div class="predict-conf conf-' + (a.confidence_label || 'Medium').toLowerCase() + '">Confidence: ' +
-      esc(a.confidence_label || 'Medium') + '</div></div>' +
-    '<div class="panel" style="margin-bottom:14px"><h4>3 Most Probable Exact Scores</h4>' +
+    '<div class="predict-banner"><div class="predict-label">' + t("winner") + '</div>' +
+      '<div class="predict-winner">' + esc(winnerTxt) + '</div>' +
+      '<div class="predict-conf conf-' + cl.toLowerCase() + '">' + t("confidence") + ': ' + t(cl) + '</div></div>' +
+    '<div class="panel" style="margin-bottom:14px"><h4>' + t("scores") + '</h4>' +
       '<div class="scoreline-list">' + scorelines + '</div></div>' +
-    '<div class="grid-2"><div class="panel"><h4>Match Result</h4>' +
-      bar(m.home_label + " win", res.home_win) + bar("Draw", res.draw) + bar(m.away_label + " win", res.away_win) +
-      '</div><div class="panel"><h4>Goals Markets</h4>' +
+    '<div class="grid-2"><div class="panel"><h4>' + t("result") + '</h4>' +
+      bar(m.home_label + " " + t("win"), res.home_win) + bar(t("draw"), res.draw) + bar(m.away_label + " " + t("win"), res.away_win) +
+      '</div><div class="panel"><h4>' + t("goals") + '</h4>' +
       gl("1.5", g.over_1_5, g.under_1_5) + gl("2.5", g.over_2_5, g.under_2_5) +
-      bar("Both teams score", a.btts.yes) + '</div></div>' +
+      bar(t("btts"), a.btts.yes) + '</div></div>' +
     formHtml +
-    '<div class="grid-2" style="margin-top:14px"><div class="panel"><h4>Likely Goalscorers</h4>' +
-      '<ul class="plist">' + scorers + '</ul></div><div class="panel"><h4>Likely Assists</h4>' +
+    '<div class="grid-2" style="margin-top:14px"><div class="panel"><h4>' + t("scorers") + '</h4>' +
+      '<ul class="plist">' + scorers + '</ul></div><div class="panel"><h4>' + t("assists") + '</h4>' +
       '<ul class="plist">' + assists + '</ul></div></div>' +
     venueHtml;
 }
@@ -348,8 +379,62 @@ function setupModal() {
   b.addEventListener("click", function (e) { if (e.target === b) close(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
 }
+/* ----- menu: account (local) + language ----- */
+function getUser() { try { return JSON.parse(localStorage.getItem("wc_user")); } catch (e) { return null; } }
+function setUser(u) {
+  if (u) localStorage.setItem("wc_user", JSON.stringify(u));
+  else localStorage.removeItem("wc_user");
+  renderAccount();
+}
+function renderAccount() {
+  var el = document.getElementById("account-area");
+  if (!el) return;
+  var u = getUser();
+  if (u) {
+    el.innerHTML = '<div class="acct-signed">' + t("signed") + ' <b>' + esc(u.email || u.name) + '</b></div>' +
+      '<button class="btn-line" id="signout-btn">' + t("signout") + '</button>';
+    document.getElementById("signout-btn").onclick = function () { setUser(null); };
+  } else {
+    el.innerHTML =
+      '<button class="btn-provider google" data-prov="Google">' + t("google") + '</button>' +
+      '<button class="btn-provider apple" data-prov="Apple">' + t("apple") + '</button>' +
+      '<div class="acct-or"></div>' +
+      '<input class="acct-inp" id="acct-email" type="email" placeholder="' + t("email") + '" autocomplete="off">' +
+      '<input class="acct-inp" id="acct-pass" type="password" placeholder="' + t("password") + '" autocomplete="off">' +
+      '<button class="btn-line gold" id="acct-create">' + t("create") + '</button>';
+    el.querySelectorAll(".btn-provider").forEach(function (b) {
+      b.onclick = function () { setUser({ name: b.getAttribute("data-prov") + " user", via: b.getAttribute("data-prov") }); };
+    });
+    document.getElementById("acct-create").onclick = function () {
+      var em = document.getElementById("acct-email").value.trim();
+      if (em) setUser({ email: em });
+    };
+  }
+}
+function renderLangs() {
+  var el = document.getElementById("lang-list");
+  if (!el) return;
+  el.innerHTML = LANGS.map(function (l) {
+    return '<button class="lang-item' + (l[0] === getLang() ? " active" : "") + '" data-lang="' + l[0] + '">' + l[1] + '</button>';
+  }).join("");
+  el.querySelectorAll(".lang-item").forEach(function (b) {
+    b.onclick = function () { setLang(b.getAttribute("data-lang")); renderLangs(); };
+  });
+}
+function setupMenu() {
+  var btn = document.getElementById("menu-btn"), dr = document.getElementById("drawer"), ov = document.getElementById("drawer-overlay");
+  function open() { dr.classList.add("open"); ov.classList.add("open"); document.body.classList.add("modal-open"); }
+  function close() { dr.classList.remove("open"); ov.classList.remove("open"); document.body.classList.remove("modal-open"); }
+  btn.onclick = open; ov.onclick = close;
+  document.getElementById("drawer-close").onclick = close;
+  renderAccount(); renderLangs();
+}
+
+window._onLangChange = function () { renderAccount(); renderLangs(); renderMatches(); };
+
 function init() {
-  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll();
+  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu();
+  applyLang();
   loadMatches(); loadGroups();
   setInterval(tick, 1000);
   setInterval(function () { loadMatches(); loadGroups(); }, 20000);

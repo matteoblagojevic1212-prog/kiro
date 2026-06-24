@@ -75,6 +75,23 @@ def get_venue_info(venue):
     return VENUE_INFO.get(venue, {"continent": "", "city": "", "stadium": venue})
 
 
+def _category(code):
+    code = int(code)
+    if code == 0:
+        return "sunny"
+    if code in (1, 2):
+        return "partly"
+    if code == 3:
+        return "cloudy"
+    if code in (45, 48):
+        return "fog"
+    if code in (71, 73, 75, 77, 85, 86):
+        return "snow"
+    if code in (95, 96, 99):
+        return "thunder"
+    return "rain"
+
+
 def get_weather(venue, date_iso):
     coords = VENUE_COORDS.get(venue)
     if not coords:
@@ -99,7 +116,7 @@ def get_weather(venue, date_iso):
             result = None
         else:
             desc, emoji = _CODES.get(int(code), ("Mixed", "\U0001f324\ufe0f"))
-            result = {"desc": desc, "emoji": emoji,
+            result = {"desc": desc, "emoji": emoji, "cat": _category(code),
                       "temp_max": tmax, "temp_min": tmin}
     except Exception:
         result = None
