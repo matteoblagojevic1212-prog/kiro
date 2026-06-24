@@ -491,6 +491,12 @@ function setupMenu() {
   function close() { dr.classList.remove("open"); ov.classList.remove("open"); document.body.classList.remove("modal-open"); }
   btn.onclick = open; ov.onclick = close;
   document.getElementById("drawer-close").onclick = close;
+  var clr = document.getElementById("clear-hist");
+  if (clr) clr.onclick = function (e) {
+    e.stopPropagation();
+    localStorage.removeItem("wc_history");
+    renderHistory();
+  };
   renderLangs(); renderHistory();
 }
 

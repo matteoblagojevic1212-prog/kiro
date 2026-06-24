@@ -300,3 +300,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display:
 }
 .comp-item:hover { background: rgba(212,175,55,.12); }
 [dir="rtl"] .comp-dropdown { left: auto; right: 0; }
+
+
+/* ---------- Clear-history button ---------- */
+.sec-head { display: flex; align-items: center; justify-content: space-between; }
+.clear-hist {
+  background: var(--card); border: 1px solid var(--line); color: var(--muted);
+  width: 22px; height: 22px; border-radius: 50%; font-size: 14px; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.clear-hist:hover { border-color: var(--live); color: var(--live); }
