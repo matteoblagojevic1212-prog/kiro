@@ -1,5 +1,19 @@
 # ⚽ World Cup 2026 Predictor
 
+## Put it online (free public website)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/matteoblagojevic1212-prog/kiro)
+
+1. Click the button above (or go to [render.com](https://render.com) → **New + → Blueprint**).
+2. Sign in with GitHub and pick the **kiro** repo → **Apply**.
+3. Render reads `render.yaml`, builds it, and gives you a public
+   `https://…onrender.com` link that works on any phone or computer, anywhere.
+
+The free instance sleeps after ~15 min idle and wakes on the next visit
+(first load ~30s). Live scores, weather and the historical dataset all work
+because Render has internet access.
+
+
 A self-contained World Cup 2026 web app written in **pure Python** (standard
 library only — no pip installs, no frameworks). It shows all **48 teams** in
 **12 groups**, a live **match schedule ordered from the next kickoff onward**

@@ -1,26 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 100" width="180" height="100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 96" width="140" height="96">
   <defs>
     <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f8e7a6"/>
-      <stop offset="0.45" stop-color="#d9b441"/>
-      <stop offset="1" stop-color="#9c7320"/>
+      <stop offset="0" stop-color="#f6e3a1"/>
+      <stop offset="0.5" stop-color="#d4af37"/>
+      <stop offset="1" stop-color="#a87d23"/>
     </linearGradient>
   </defs>
-
-  <!-- big rounded "2" and "6" in white, trophy sits between them -->
-  <text x="34" y="70" text-anchor="middle" font-family="Arial Black, Arial, sans-serif"
-        font-weight="900" font-size="86" fill="#ffffff">2</text>
-  <text x="146" y="70" text-anchor="middle" font-family="Arial Black, Arial, sans-serif"
-        font-weight="900" font-size="86" fill="#ffffff">6</text>
-
-  <!-- stylised World Cup trophy in the centre -->
-  <g fill="url(#gold)">
-    <path d="M90 16c-7.5 0-11.5 6-9 15 2 7 6.4 11.7 11 14v11h-6.2c-1.1 0-2 .9-2 2V78h25v-6c0-1.1-.9-2-2-2H101v-11c4.6-2.3 9-7 11-14 2.5-9-1.5-15-9-15z"/>
-    <rect x="79" y="80" width="22" height="6" rx="1.6"/>
-    <rect x="76" y="87" width="28" height="4" rx="1.4"/>
-  </g>
-
-  <!-- FIFA wordmark -->
-  <text x="90" y="99" text-anchor="middle" font-family="Arial, sans-serif"
-        font-weight="800" font-size="12" letter-spacing="2" fill="#ffffff">FIFA</text>
+  <text x="50%" y="60" text-anchor="middle"
+        font-family="Arial Black, Arial, sans-serif" font-weight="800"
+        font-size="66" letter-spacing="-3" fill="url(#gold)">26</text>
+  <text x="50%" y="84" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-weight="600"
+        font-size="12" letter-spacing="4" fill="#ffffff">WORLD CUP</text>
 </svg>
