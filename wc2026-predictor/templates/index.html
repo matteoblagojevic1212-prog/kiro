@@ -25,7 +25,8 @@
   <nav class="tabs">
     <div class="comp-menu" id="comp-menu">
       <button class="comp-trigger" id="comp-trigger">
-        <img id="comp-logo" class="comp-logo" src="/static/logo.svg" alt="" />
+        <img id="comp-logo" class="comp-logo" src="/static/logo.png" alt=""
+             onerror="this.onerror=null;this.src='/static/logo.svg'" />
         <span id="comp-name">World Cup 2026</span><span class="caret">▾</span>
       </button>
       <div class="comp-dropdown" id="comp-dropdown"></div>
@@ -57,7 +58,7 @@
     </div>
   </div>
 
-  <!-- Slide-in menu: account + language -->
+  <!-- Slide-in menu: language + analysis history -->
   <div class="drawer-overlay" id="drawer-overlay"></div>
   <aside class="drawer" id="drawer" aria-hidden="true">
     <button class="drawer-close" id="drawer-close" aria-label="Close">×</button>
