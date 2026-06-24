@@ -303,6 +303,9 @@ class Handler(BaseHTTPRequestHandler):
                 now = now_utc()
                 return self._json({"server_eu": eu_strings(now), "tz": "Europe/Brussels"})
 
+            if path == "/api/install-path":
+                return self._json({"path": HERE})
+
             if path == "/api/open-folder":
                 ok = _open_folder()
                 return self._json({"ok": ok, "path": HERE})

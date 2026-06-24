@@ -504,6 +504,11 @@ function setupMenu() {
       if (fp) fp.textContent = d.path || "";
     }).catch(function () {});
   };
+  // always show the install path so the hidden folder is easy to find
+  fetch("/api/install-path").then(function (r) { return r.json(); }).then(function (d) {
+    var fp = document.getElementById("folder-path");
+    if (fp) fp.textContent = d.path || "";
+  }).catch(function () {});
   renderLangs(); renderHistory();
 }
 
