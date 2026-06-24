@@ -446,6 +446,32 @@ def simulated_result_for(match_id, home, away):
     return sample(lam_h), sample(lam_a)
 
 
+def scorer_timeline(match_id, home, away, result):
+    """Goal-by-goal timeline (minute + likely scorer) for a finished match.
+    Scorers are attributed to each side's likely goal-getters, seeded so it's
+    stable. (Exact scorer data isn't in the historical results dataset.)"""
+    evs = goal_events({"id": match_id, "result": result}, home, away)
+    out = []
+    for i, e in enumerate(evs):
+        side = e["team"]
+        tkey = home if side == "home" else away
+        players = team(tkey)["players"]
+        name = "?"
+        if players:
+            total = sum(p[1] for p in players) or 1
+            rng = random.Random("sc" + match_id + str(i))
+            r = rng.random() * total
+            cum = 0.0
+            name = players[0][0]
+            for p in players:
+                cum += p[1]
+                if r <= cum:
+                    name = p[0]
+                    break
+        out.append({"team": side, "minute": e["minute"], "player": name})
+    return out
+
+
 def _ko_result(match_id, home, away):
     """A knockout result that always has a winner (penalties if drawn)."""
     res = simulated_result_for(match_id, home, away)

@@ -383,6 +383,11 @@ class Handler(BaseHTTPRequestHandler):
                 if mt:
                     result["venue"] = mt["venue"]
                     result["kickoff"] = eu_strings(mt["kickoff"])
+                    if mt.get("result"):
+                        result["finished"] = True
+                        result["score"] = {"home": mt["result"][0], "away": mt["result"][1]}
+                        result["goal_timeline"] = engine.scorer_timeline(
+                            mt["id"], home, away, mt["result"])
                     try:
                         import weather
                         result["venue_info"] = weather.get_venue_info(mt["venue"])

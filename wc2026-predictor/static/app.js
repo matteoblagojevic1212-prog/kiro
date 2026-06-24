@@ -1,7 +1,7 @@
 /* World Cup 2026 Predictor - frontend (vanilla JS) */
 "use strict";
 
-var state = { matches: [], compMatches: [], comp: "wc", filter: "upcoming", search: "" };
+var state = { matches: [], compMatches: [], comps: [], comp: "wc", filter: "upcoming", search: "" };
 
 function flagUrl(iso, size) {
   size = size || "w160";
@@ -169,7 +169,7 @@ function matchCard(m) {
       '</div>' +
       '<div class="venue">' + esc(m.venue) + ' · ' + esc(m.kickoff.time) + ' CET</div>' +
       '<button class="analyze-btn" ' + (m.analyzable ? '' : 'disabled') + '>' +
-        starSvg() + '<span>' + t("analyse") + '</span></button>' +
+        starSvg() + '<span>' + (m.status === "finished" ? t("summary") : t("analyse")) + '</span></button>' +
     '</div>'
   );
   var btn = card.querySelector(".analyze-btn");
@@ -198,9 +198,13 @@ function compMid(m) {
   return '<div class="mid-col"><div class="kick-day">' + esc(m.kickoff ? m.kickoff.day : "") + '</div>' +
     '<div class="score">' + esc(sc) + '</div><div class="ft-badge">' + t("ft") + '</div></div>';
 }
+function compName() {
+  var c = (state.comps || []).filter(function (x) { return x.id === state.comp; })[0];
+  return c ? c.name : "";
+}
 function compCard(m) {
   return el('<div class="match-card">' +
-    '<div class="match-top"><span class="stage-pill">' + esc(document.getElementById("comp-name").textContent) + '</span>' +
+    '<div class="match-top"><span class="stage-pill">' + esc(compName()) + '</span>' +
     '<span class="status ' + m.status + '">' + t(m.status) + '</span></div>' +
     '<div class="versus">' + crestCol(m.home_label, m.home_logo) + compMid(m) + crestCol(m.away_label, m.away_logo) + '</div>' +
     '<div class="venue">' + (m.kickoff ? (esc(m.kickoff.day) + " · " + esc(m.kickoff.time) + " CET") : "") + '</div>' +
@@ -239,29 +243,32 @@ function loadMatches() {
 }
 
 /* ----- competitions ----- */
+function renderCompDropdown() {
+  var dd = document.getElementById("comp-dropdown");
+  if (!dd) return;
+  dd.innerHTML = (state.comps || []).map(function (c) {
+    return '<button class="comp-item' + (c.id === state.comp ? " active" : "") + '" data-id="' + c.id + '" data-name="' + esc(c.name) + '">' +
+      '<img class="comp-logo" src="' + esc(c.logo) + '" alt="" onerror="this.onerror=null;this.src=\'/static/logo.svg\'">' +
+      '<span>' + esc(c.name) + '</span></button>';
+  }).join("");
+  dd.querySelectorAll(".comp-item").forEach(function (b) {
+    b.onclick = function () { selectComp(b.getAttribute("data-id")); };
+  });
+}
 function loadCompetitions() {
   fetch("/api/competitions").then(function (r) { return r.json(); }).then(function (d) {
-    var dd = document.getElementById("comp-dropdown");
-    dd.innerHTML = d.competitions.map(function (c) {
-      return '<button class="comp-item" data-id="' + c.id + '" data-name="' + esc(c.name) + '" data-logo="' + esc(c.logo) + '">' +
-        '<img class="comp-logo" src="' + esc(c.logo) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<span>' + esc(c.name) + '</span></button>';
-    }).join("");
-    dd.querySelectorAll(".comp-item").forEach(function (b) {
-      b.onclick = function () {
-        selectComp(b.getAttribute("data-id"), b.getAttribute("data-name"), b.getAttribute("data-logo"));
-        document.getElementById("comp-menu").classList.remove("open");
-      };
-    });
+    state.comps = d.competitions || [];
+    renderCompDropdown();
   }).catch(function () {});
 }
-function selectComp(id, name, logo) {
+function selectComp(id) {
   state.comp = id;
-  document.getElementById("comp-name").textContent = name;
-  document.getElementById("comp-logo").src = logo;
+  renderCompDropdown();
+  var hv = document.getElementById("comp-hover");
+  if (hv) hv.classList.remove("open");
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   document.getElementById("matches").innerHTML = '<div class="loading">Loading…</div>';
-  if (id === "wc") { renderMatches(); }
-  else { loadComp(); }
+  if (id === "wc") { loadMatches(); } else { loadComp(); }
 }
 function loadComp() {
   return fetch("/api/competition?id=" + encodeURIComponent(state.comp)).then(function (r) { return r.json(); })
@@ -369,9 +376,11 @@ function renderAnalysis(body, m, a) {
   var winnerTxt = (a.winner === "Draw") ? t("draw") : (a.winner || t("draw"));
   var cl = a.confidence_label || "Medium";
 
-  body.innerHTML =
-    '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
-      '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>' +
+  var head = '<div class="analysis-head">' + teamCol(m.home, m.home_label, m.home_iso) +
+    '<div class="vs">VS</div>' + teamCol(m.away, m.away_label, m.away_iso) + '</div>';
+
+  // ----- the AI (pre-match) analysis bundle -----
+  var ai =
     '<div class="predict-banner"><div class="predict-label">' + t("winner") + '</div>' +
       '<div class="predict-winner">' + esc(winnerTxt) + '</div>' +
       '<div class="predict-conf conf-' + cl.toLowerCase() + '">' + t("confidence") + ': ' + t(cl) + '</div></div>' +
@@ -385,8 +394,28 @@ function renderAnalysis(body, m, a) {
     formHtml +
     '<div class="grid-2" style="margin-top:14px"><div class="panel"><h4>' + t("scorers") + '</h4>' +
       '<ul class="plist">' + scorers + '</ul></div><div class="panel"><h4>' + t("assists") + '</h4>' +
-      '<ul class="plist">' + assists + '</ul></div></div>' +
-    venueHtml;
+      '<ul class="plist">' + assists + '</ul></div></div>';
+
+  if (a.finished && a.goal_timeline) {
+    var sc = a.score ? (a.score.home + " - " + a.score.away) : "";
+    var goals = a.goal_timeline.length
+      ? a.goal_timeline.map(function (gg) {
+          var iso = gg.team === "home" ? m.home_iso : m.away_iso;
+          return '<li><span class="goal-min">' + gg.minute + "'</span>" +
+            '<img class="flag-sm" src="' + flagUrl(iso, "w40") + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+            '<span>' + esc(gg.player) + '</span></li>';
+        }).join("")
+      : '<li><span class="note">' + t("nogoals") + '</span></li>';
+    body.innerHTML = head +
+      '<div class="predict-banner"><div class="predict-label">' + t("ft") + '</div>' +
+        '<div class="predict-winner">' + esc(sc) + '</div></div>' +
+      '<div class="panel" style="margin-top:14px"><h4>' + t("goalsT") + '</h4>' +
+        '<ul class="plist goals-list">' + goals + '</ul></div>' +
+      venueHtml +
+      '<h4 class="prematch-head">' + t("prematch") + '</h4>' + ai;
+  } else {
+    body.innerHTML = head + ai + venueHtml;
+  }
 }
 
 /* ----- wiring ----- */
@@ -514,16 +543,8 @@ function setupMenu() {
 
 window._onLangChange = function () { renderLangs(); renderHistory(); renderMatches(); };
 
-function setupCompMenu() {
-  var menu = document.getElementById("comp-menu");
-  var trig = document.getElementById("comp-trigger");
-  if (!menu || !trig) return;
-  trig.onclick = function (e) { e.stopPropagation(); menu.classList.toggle("open"); };
-  document.addEventListener("click", function () { menu.classList.remove("open"); });
-}
-
 function init() {
-  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu(); setupCompMenu();
+  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu();
   applyLang();
   loadCompetitions();
   loadMatches(); loadGroups();

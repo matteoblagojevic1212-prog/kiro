@@ -12,7 +12,7 @@ import urllib.request
 
 # id is our key; slug is the ESPN league slug; logo is shown in the menu.
 COMPETITIONS = [
-    {"id": "wc", "slug": "fifa.world", "name": "World Cup 2026", "logo": "/static/logo.svg"},
+    {"id": "wc", "slug": "fifa.world", "name": "World Cup 2026", "logo": "https://a.espncdn.com/i/leaguelogos/soccer/500/606.png"},
     {"id": "eng.1", "slug": "eng.1", "name": "Premier League", "logo": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"},
     {"id": "esp.1", "slug": "esp.1", "name": "La Liga", "logo": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png"},
     {"id": "ger.1", "slug": "ger.1", "name": "Bundesliga", "logo": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png"},

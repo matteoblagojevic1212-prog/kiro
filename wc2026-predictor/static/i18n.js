@@ -255,3 +255,16 @@ T.zh.files = "文件"; T.zh.openfolder = "打开安装文件夹";
 T.pt.files = "Ficheiros"; T.pt.openfolder = "Abrir pasta de instalação";
 T.de.files = "Dateien"; T.de.openfolder = "Installationsordner öffnen";
 T.hr.files = "Datoteke"; T.hr.openfolder = "Otvori instalacijsku mapu";
+
+
+// Finished-game summary labels
+T.en.summary = "Goals & summary"; T.en.goalsT = "Goals"; T.en.prematch = "Pre-match AI analysis"; T.en.nogoals = "No goals";
+T.it.summary = "Gol e riassunto"; T.it.goalsT = "Gol"; T.it.prematch = "Analisi IA pre-partita"; T.it.nogoals = "Nessun gol";
+T.fr.summary = "Buts & résumé"; T.fr.goalsT = "Buts"; T.fr.prematch = "Analyse IA d'avant-match"; T.fr.nogoals = "Aucun but";
+T.es.summary = "Goles y resumen"; T.es.goalsT = "Goles"; T.es.prematch = "Análisis IA previo"; T.es.nogoals = "Sin goles";
+T.ru.summary = "Голы и обзор"; T.ru.goalsT = "Голы"; T.ru.prematch = "Прематч-анализ ИИ"; T.ru.nogoals = "Без голов";
+T.ar.summary = "الأهداف والملخص"; T.ar.goalsT = "الأهداف"; T.ar.prematch = "تحليل ما قبل المباراة"; T.ar.nogoals = "لا أهداف";
+T.zh.summary = "进球与总结"; T.zh.goalsT = "进球"; T.zh.prematch = "赛前AI分析"; T.zh.nogoals = "无进球";
+T.pt.summary = "Golos e resumo"; T.pt.goalsT = "Golos"; T.pt.prematch = "Análise IA pré-jogo"; T.pt.nogoals = "Sem golos";
+T.de.summary = "Tore & Übersicht"; T.de.goalsT = "Tore"; T.de.prematch = "KI-Analyse vor dem Spiel"; T.de.nogoals = "Keine Tore";
+T.hr.summary = "Golovi i sažetak"; T.hr.goalsT = "Golovi"; T.hr.prematch = "AI analiza prije utakmice"; T.hr.nogoals = "Nema golova";
