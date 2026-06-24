@@ -13,11 +13,8 @@
       <span></span><span></span><span></span>
     </button>
     <div class="brand">
-      <img class="logo" src="/static/logo.png" alt="World Cup 2026"
-           onerror="this.onerror=null;this.src='/static/logo.svg'" />
       <div class="brand-text">
-        <h1>AI Match Predictor</h1>
-        <p class="sub" data-i18n="subtitle">Predictor &amp; live tracker</p>
+        <h1>AI World Cup 2026 Predictor</h1>
       </div>
     </div>
   </header>
@@ -26,12 +23,7 @@
     <button class="tab active" data-tab="matches" data-i18n="matches">Matches</button>
     <button class="tab" data-tab="groups" data-i18n="groups">Groups</button>
     <div class="filter-wrap" id="filter-wrap">
-      <div class="comp-hover" id="comp-hover">
-        <button class="chip active has-comp" data-filter="upcoming">
-          <span data-i18n="upcoming">Upcoming</span> <span class="caret">▾</span>
-        </button>
-        <div class="comp-dropdown" id="comp-dropdown"></div>
-      </div>
+      <button class="chip active" data-filter="upcoming" data-i18n="upcoming">Upcoming</button>
       <button class="chip" data-filter="live" data-i18n="live">Live</button>
       <button class="chip" data-filter="finished" data-i18n="finished">Finished</button>
       <input id="search" class="search" type="text" data-i18n-ph="search" placeholder="Search a team…"

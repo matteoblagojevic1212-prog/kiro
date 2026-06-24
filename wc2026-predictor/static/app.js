@@ -167,7 +167,7 @@ function matchCard(m) {
         midCol(m) +
         teamCol(m.away, m.away_label, m.away_iso) +
       '</div>' +
-      '<div class="venue">' + esc(compName()) + ' · ' + esc(m.venue) + ' · ' + esc(m.kickoff.time) + ' CET</div>' +
+      '<div class="venue">' + esc(m.venue) + ' · ' + esc(m.kickoff.time) + ' CET</div>' +
       '<button class="analyze-btn" ' + (m.analyzable ? '' : 'disabled') + '>' +
         starSvg() + '<span>' + (m.status === "finished" ? t("summary") : t("analyse")) + '</span></button>' +
     '</div>'
@@ -554,11 +554,10 @@ function setupCompHover() {
 }
 
 function init() {
-  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu(); setupCompHover();
+  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu();
   applyLang();
-  loadCompetitions();
   loadMatches(); loadGroups();
   setInterval(tick, 1000);
-  setInterval(function () { loadData(); loadGroups(); }, 20000);
+  setInterval(function () { loadMatches(); loadGroups(); }, 20000);
 }
 document.addEventListener("DOMContentLoaded", init);
