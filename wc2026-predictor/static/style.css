@@ -259,3 +259,19 @@ table.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .lang-item { padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer; font-size: 13px; }
 .lang-item:hover { border-color: var(--gold); }
 .lang-item.active { background: rgba(212,175,55,.16); border-color: var(--gold); color: var(--gold-soft); }
+
+
+/* ---------- Hide scrollbars (scroll still works via wheel/touch) ---------- */
+html { scrollbar-width: none; -ms-overflow-style: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.drawer, .modal-backdrop { scrollbar-width: none; }
+.drawer::-webkit-scrollbar, .modal-backdrop::-webkit-scrollbar { display: none; }
+
+/* ---------- Analysis history ---------- */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.hist-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: transparent;
+  color: var(--text); cursor: pointer; font-size: 13px; }
+.hist-item span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-item:hover { border-color: var(--gold); }
+.hist-empty { color: var(--muted); font-size: 13px; }

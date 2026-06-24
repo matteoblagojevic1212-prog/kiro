@@ -42,22 +42,23 @@ function weatherIcon(cat) {
   return '<svg class="wx-icon" viewBox="0 0 24 24" aria-hidden="true">' + (inner[cat] || cloud) + '</svg>';
 }
 
-/* ----- live clock math (drives the Google-style minute + score) ----- */
+/* ----- live clock math (drives the Google-style mm:ss + score) ----- */
 function liveInfo(koMs, now, opts) {
   opts = opts || {};
-  var el = (now - koMs) / 60000; // minutes since kickoff
+  var sec = (now - koMs) / 1000, el = sec / 60;
   if (el < 0) return { phase: "pre" };
-  if (el <= 45) { var a = Math.max(1, Math.ceil(el)); return { phase: "1h", min: a, label: a + "'" }; }
-  if (el <= 47) return { phase: "1h", min: 45, label: "45+" + Math.ceil(el - 45) + "'" };
-  if (el <= 62) return { phase: "ht", min: 45, label: "Half time" };
-  if (el <= 107) { var m = Math.min(90, 45 + Math.ceil(el - 62)); return { phase: "2h", min: m, label: m + "'" }; }
-  if (el <= 110) return { phase: "2h", min: 90, label: "90+" + Math.ceil(el - 107) + "'" };
-  // After 90+stoppage: knockouts level go to extra time, then penalties
+  if (el <= 47) return { phase: "run", running: true, secs: Math.min(sec, 47 * 60), min: Math.min(47, Math.max(1, Math.ceil(el))) };
+  if (el <= 62) return { phase: "ht", min: 45 };
+  if (el <= 110) return { phase: "run", running: true, secs: (45 + (el - 62)) * 60, min: Math.min(93, Math.floor(45 + (el - 62))) };
   if (opts.knockout && opts.level && opts.hasScore) {
-    if (el <= 125) { var e = Math.min(120, 90 + Math.ceil(el - 110)); return { phase: "et", min: e, label: e + "' ET" }; }
-    return { phase: "pens", min: 120, label: "Penalties" };
+    if (el <= 125) return { phase: "et", running: true, et: true, secs: (90 + (el - 110)) * 60, min: Math.min(120, Math.floor(90 + (el - 110))) };
+    return { phase: "pens", min: 120 };
   }
-  return { phase: "ft", min: 120, label: "FT" };
+  return { phase: "ft", min: 120 };
+}
+function mmss(secs) {
+  var s = Math.max(0, Math.floor(secs)), m = Math.floor(s / 60);
+  return m + ":" + String(s % 60).padStart(2, "0");
 }
 function scoreFromEvents(events, matchMinute) {
   var h = 0, a = 0;
@@ -102,11 +103,13 @@ function tick() {
     });
     if (minEl) {
       var label;
-      if ((m.live_detail && /half|ht\b/i.test(m.live_detail)) || info.phase === "ht") label = t("ht");
-      else if (m.live_clock) label = m.live_clock;
-      else label = info.label || "LIVE";
+      if (m.live_detail && /full|ft\b/i.test(m.live_detail)) label = t("ft");
+      else if ((m.live_detail && /half|ht\b/i.test(m.live_detail)) || info.phase === "ht") label = t("ht");
+      else if (info.phase === "pens") label = "Penalties";
+      else if (info.running) label = mmss(info.secs) + (info.et ? " ET" : "");
+      else label = "LIVE";
       minEl.textContent = label;
-      minEl.className = "minute" + (/half/i.test(label) || info.phase === "ht" ? " ht" : "");
+      minEl.className = "minute" + (info.phase === "ht" ? " ht" : "");
     }
     if (scEl && sc) scEl.textContent = sc.home + " - " + sc.away;
   });
@@ -242,6 +245,7 @@ function playerRow(p) {
     '</span><span class="pp">' + p.prob + '%</span></li>';
 }
 function openAnalysis(m) {
+  pushHistory(m);
   window._isoOf = function (t) { return t === m.home ? m.home_iso : (t === m.away ? m.away_iso : "un"); };
   var backdrop = document.getElementById("modal-backdrop");
   var body = document.getElementById("modal-body");
@@ -379,37 +383,31 @@ function setupModal() {
   b.addEventListener("click", function (e) { if (e.target === b) close(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
 }
-/* ----- menu: account (local) + language ----- */
-function getUser() { try { return JSON.parse(localStorage.getItem("wc_user")); } catch (e) { return null; } }
-function setUser(u) {
-  if (u) localStorage.setItem("wc_user", JSON.stringify(u));
-  else localStorage.removeItem("wc_user");
-  renderAccount();
+/* ----- menu: analysis history + language ----- */
+function getHistory() { try { return JSON.parse(localStorage.getItem("wc_history")) || []; } catch (e) { return []; } }
+function pushHistory(m) {
+  var list = getHistory().filter(function (x) { return x.id !== m.id; });
+  list.unshift({ id: m.id, home: m.home, away: m.away, home_label: m.home_label,
+                 away_label: m.away_label, home_iso: m.home_iso, away_iso: m.away_iso,
+                 venue: m.venue, group: m.group, stage: m.stage, analyzable: true });
+  list = list.slice(0, 20);
+  localStorage.setItem("wc_history", JSON.stringify(list));
+  renderHistory();
 }
-function renderAccount() {
-  var el = document.getElementById("account-area");
+function renderHistory() {
+  var el = document.getElementById("history-list");
   if (!el) return;
-  var u = getUser();
-  if (u) {
-    el.innerHTML = '<div class="acct-signed">' + t("signed") + ' <b>' + esc(u.email || u.name) + '</b></div>' +
-      '<button class="btn-line" id="signout-btn">' + t("signout") + '</button>';
-    document.getElementById("signout-btn").onclick = function () { setUser(null); };
-  } else {
-    el.innerHTML =
-      '<button class="btn-provider google" data-prov="Google">' + t("google") + '</button>' +
-      '<button class="btn-provider apple" data-prov="Apple">' + t("apple") + '</button>' +
-      '<div class="acct-or"></div>' +
-      '<input class="acct-inp" id="acct-email" type="email" placeholder="' + t("email") + '" autocomplete="off">' +
-      '<input class="acct-inp" id="acct-pass" type="password" placeholder="' + t("password") + '" autocomplete="off">' +
-      '<button class="btn-line gold" id="acct-create">' + t("create") + '</button>';
-    el.querySelectorAll(".btn-provider").forEach(function (b) {
-      b.onclick = function () { setUser({ name: b.getAttribute("data-prov") + " user", via: b.getAttribute("data-prov") }); };
-    });
-    document.getElementById("acct-create").onclick = function () {
-      var em = document.getElementById("acct-email").value.trim();
-      if (em) setUser({ email: em });
-    };
-  }
+  var list = getHistory();
+  if (!list.length) { el.innerHTML = '<div class="hist-empty">' + t("nohist") + '</div>'; return; }
+  el.innerHTML = list.map(function (x, i) {
+    return '<button class="hist-item" data-i="' + i + '">' +
+      '<img class="flag-sm" src="' + flagUrl(x.home_iso, "w40") + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<span>' + esc(x.home_label) + ' – ' + esc(x.away_label) + '</span>' +
+      '<img class="flag-sm" src="' + flagUrl(x.away_iso, "w40") + '" alt="" onerror="this.style.visibility=\'hidden\'"></button>';
+  }).join("");
+  el.querySelectorAll(".hist-item").forEach(function (b) {
+    b.onclick = function () { openAnalysis(list[+b.getAttribute("data-i")]); };
+  });
 }
 function renderLangs() {
   var el = document.getElementById("lang-list");
@@ -427,10 +425,10 @@ function setupMenu() {
   function close() { dr.classList.remove("open"); ov.classList.remove("open"); document.body.classList.remove("modal-open"); }
   btn.onclick = open; ov.onclick = close;
   document.getElementById("drawer-close").onclick = close;
-  renderAccount(); renderLangs();
+  renderLangs(); renderHistory();
 }
 
-window._onLangChange = function () { renderAccount(); renderLangs(); renderMatches(); };
+window._onLangChange = function () { renderLangs(); renderHistory(); renderMatches(); };
 
 function init() {
   setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu();

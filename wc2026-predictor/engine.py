@@ -164,20 +164,23 @@ def _player_markets(name, lam):
     players = rec["players"]
     if not players:
         return [], []
-    gw_total = sum(p[1] for p in players) or 1
-    aw_total = sum(p[2] for p in players) or 1
+    # Sharpen the split with an exponent so genuine goalscorers lead the
+    # scorers list and genuine creators lead the assists list (less overlap).
+    POW = 1.45
+    gw_total = sum(p[1] ** POW for p in players) or 1
+    aw_total = sum(p[2] ** POW for p in players) or 1
 
     scorers = []
     for pname, gw, _ in players:
-        xg = lam * (gw / gw_total)
+        xg = lam * (gw ** POW / gw_total)
         p_score = 1.0 - math.exp(-xg)
         scorers.append({"player": pname, "team": name,
                         "xg": round(xg, 2), "prob": _pct(p_score)})
 
-    # ~70% of goals are assisted; distribute by assist weight.
+    # ~75% of goals are assisted; distribute by assist tendency.
     assisters = []
     for pname, _, aw in players:
-        xa = 0.70 * lam * (aw / aw_total)
+        xa = 0.75 * lam * (aw ** POW / aw_total)
         p_assist = 1.0 - math.exp(-xa)
         assisters.append({"player": pname, "team": name,
                           "xa": round(xa, 2), "prob": _pct(p_assist)})
@@ -258,7 +261,7 @@ def analyze(home, away):
     mx = max(p_home, p_draw, p_away)
     winner = hname if mx == p_home else (aname if mx == p_away else "Draw")
     confidence = round(mx * 100)
-    conf_label = "High" if mx >= 0.46 else ("Medium" if mx >= 0.35 else "Low")
+    conf_label = "High" if mx >= 0.55 else ("Medium" if mx >= 0.40 else "Low")
 
     return {
         "home": home,

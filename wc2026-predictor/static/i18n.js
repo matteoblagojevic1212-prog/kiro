@@ -229,3 +229,16 @@ function applyLang() {
   // let the rest of the app re-render translated dynamic content
   if (window._onLangChange) window._onLangChange();
 }
+
+
+// History section labels (added across all languages)
+T.en.history = "Analysis history"; T.en.nohist = "No analyses yet";
+T.it.history = "Cronologia analisi"; T.it.nohist = "Nessuna analisi";
+T.fr.history = "Historique des analyses"; T.fr.nohist = "Aucune analyse";
+T.es.history = "Historial de análisis"; T.es.nohist = "Sin análisis";
+T.ru.history = "История анализов"; T.ru.nohist = "Пока нет анализов";
+T.ar.history = "سجل التحليلات"; T.ar.nohist = "لا توجد تحليلات بعد";
+T.zh.history = "分析记录"; T.zh.nohist = "暂无分析";
+T.pt.history = "Histórico de análises"; T.pt.nohist = "Sem análises";
+T.de.history = "Analyseverlauf"; T.de.nohist = "Noch keine Analysen";
+T.hr.history = "Povijest analiza"; T.hr.nohist = "Još nema analiza";
