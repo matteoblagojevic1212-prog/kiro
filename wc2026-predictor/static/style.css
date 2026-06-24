@@ -325,6 +325,6 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display:
 /* ---------- Competitions on hover over "Upcoming" ---------- */
 .comp-hover { position: relative; }
 .comp-hover:hover .comp-dropdown, .comp-hover.open .comp-dropdown { display: block; }
-.comp-hover .comp-dropdown { top: 120%; left: 0; }
+.comp-hover .comp-dropdown { top: 100%; left: 0; padding-top: 8px; }
 .chip.has-comp { padding-right: 26px; }
 .chip .caret { position: absolute; right: 10px; opacity: .7; font-size: 10px; }

@@ -11,7 +11,7 @@ var RTL = { ar: true };
 
 var T = {
   en: {
-    subtitle: "Predictor & live tracker", matches: "Matches", groups: "Groups",
+    subtitle: "AI football predictions · World Cup, UEFA & top leagues", matches: "Matches", groups: "Groups",
     upcoming: "Upcoming", live: "Live", finished: "Finished", search: "Search a team…",
     menu: "Menu", account: "Account", language: "Language",
     google: "Continue with Google", apple: "Continue with Apple",

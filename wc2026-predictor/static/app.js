@@ -167,7 +167,7 @@ function matchCard(m) {
         midCol(m) +
         teamCol(m.away, m.away_label, m.away_iso) +
       '</div>' +
-      '<div class="venue">' + esc(m.venue) + ' · ' + esc(m.kickoff.time) + ' CET</div>' +
+      '<div class="venue">' + esc(compName()) + ' · ' + esc(m.venue) + ' · ' + esc(m.kickoff.time) + ' CET</div>' +
       '<button class="analyze-btn" ' + (m.analyzable ? '' : 'disabled') + '>' +
         starSvg() + '<span>' + (m.status === "finished" ? t("summary") : t("analyse")) + '</span></button>' +
     '</div>'
@@ -543,8 +543,18 @@ function setupMenu() {
 
 window._onLangChange = function () { renderLangs(); renderHistory(); renderMatches(); };
 
+function setupCompHover() {
+  var hv = document.getElementById("comp-hover");
+  if (!hv) return;
+  var chip = hv.querySelector(".chip");
+  var dd = hv.querySelector(".comp-dropdown");
+  if (chip) chip.addEventListener("click", function (e) { e.stopPropagation(); hv.classList.toggle("open"); });
+  if (dd) dd.addEventListener("click", function (e) { e.stopPropagation(); });
+  document.addEventListener("click", function () { hv.classList.remove("open"); });
+}
+
 function init() {
-  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu();
+  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu(); setupCompHover();
   applyLang();
   loadCompetitions();
   loadMatches(); loadGroups();
