@@ -1,0 +1,30 @@
+WORLD CUP 2026 PREDICTOR  -  how to run
+=======================================
+
+You need Python 3.9 or newer installed (free, from python.org/downloads).
+
+WINDOWS
+  1. Double-click  Start-Windows.bat
+  2. Your browser opens at  http://localhost:8000
+     (If Windows warns "unknown publisher", click More info -> Run anyway.)
+
+MAC
+  1. Right-click  Start-Mac.command  ->  Open  (only needed the first time).
+  2. Your browser opens at  http://localhost:8000
+
+ANY SYSTEM (or if the buttons don't work)
+  Open a terminal in this folder and run:
+      python3 wc2026.py
+  (On Windows try:  py wc2026.py   or   python wc2026.py )
+  Then open  http://localhost:8000  in your browser.
+
+TO STOP
+  Close the black window, or press  Ctrl + C  in it.
+
+NOTES
+  - The first launch unpacks the app into a hidden folder in your home
+    directory ( .wc2026_predictor ). Open the in-app menu (the three lines,
+    top-left) -> Files -> "Open install folder" to see it.
+  - First run with internet downloads the full results dataset once; after
+    that it is reused. Live scores update on their own.
+  - Everything is inside the single file  wc2026.py  - no other files needed.
