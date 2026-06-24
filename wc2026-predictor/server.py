@@ -36,6 +36,7 @@ if not os.environ.get("NO_FETCH"):
 
 import engine
 import live
+import competitions
 import ratings
 import results_store
 from data import GROUPS, TEAMS, team
@@ -105,6 +106,16 @@ UTC = timezone.utc
 # ---------------------------------------------------------------------------
 def now_utc():
     return datetime.now(UTC)
+
+
+def _parse_iso(s):
+    """Parse an ESPN ISO date (possibly ending in Z) to an aware UTC datetime."""
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(UTC)
+    except Exception:
+        return None
 
 
 def eu_strings(dt_utc):
@@ -276,6 +287,29 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/time":
                 now = now_utc()
                 return self._json({"server_eu": eu_strings(now), "tz": "Europe/Brussels"})
+
+            if path == "/api/competitions":
+                return self._json({"competitions": competitions.list_competitions()})
+
+            if path == "/api/competition":
+                cid = (qs.get("id") or ["wc"])[0]
+                rows = competitions.fetch(cid)
+                out = []
+                for r in rows:
+                    ko = _parse_iso(r.get("kickoff_iso"))
+                    out.append({
+                        "home_label": r["home_label"], "away_label": r["away_label"],
+                        "home_logo": r.get("home_logo"), "away_logo": r.get("away_logo"),
+                        "status": r["status"], "score": r.get("score"),
+                        "clock": r.get("clock"), "detail": r.get("detail"),
+                        "kickoff": eu_strings(ko) if ko else None,
+                    })
+                # soonest upcoming/live first, then recent finished
+                nd = [m for m in out if m["status"] != "finished"]
+                fin = [m for m in out if m["status"] == "finished"]
+                nd.sort(key=lambda m: (m["kickoff"] or {}).get("iso_utc") or "")
+                fin.sort(key=lambda m: (m["kickoff"] or {}).get("iso_utc") or "", reverse=True)
+                return self._json({"matches": nd + fin})
 
             if path == "/api/info":
                 m = ratings.RATINGS_META

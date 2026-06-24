@@ -1,7 +1,7 @@
 /* World Cup 2026 Predictor - frontend (vanilla JS) */
 "use strict";
 
-var state = { matches: [], filter: "upcoming" };
+var state = { matches: [], compMatches: [], comp: "wc", filter: "upcoming", search: "" };
 
 function flagUrl(iso, size) {
   size = size || "w160";
@@ -178,15 +178,46 @@ function matchCard(m) {
   return card;
 }
 
+function crestCol(label, logo) {
+  var img = logo
+    ? '<img class="flag" src="' + esc(logo) + '" alt="" loading="lazy" style="object-fit:contain;background:transparent;border:0" onerror="this.style.visibility=\'hidden\'">'
+    : '<div class="flag"></div>';
+  return '<div class="team-col">' + img + '<div class="team-name">' + esc(label || "TBD") + '</div></div>';
+}
+function compMid(m) {
+  if (m.status === "upcoming") {
+    return '<div class="mid-col"><div class="kick-day">' + esc(m.kickoff ? m.kickoff.day : "") + '</div>' +
+      '<div class="vs">VS</div><div class="kick-time">' + esc(m.kickoff ? m.kickoff.time : "") + '</div>' +
+      (m.kickoff ? '<div class="countdown" data-kickoff="' + m.kickoff.iso_utc + '"></div>' : '') + '</div>';
+  }
+  var sc = m.score ? (m.score.home + " - " + m.score.away) : "–";
+  if (m.status === "live") {
+    return '<div class="mid-col"><div class="score">' + esc(sc) + '</div>' +
+      '<div class="minute">' + esc(m.detail || m.clock || "LIVE") + '</div></div>';
+  }
+  return '<div class="mid-col"><div class="kick-day">' + esc(m.kickoff ? m.kickoff.day : "") + '</div>' +
+    '<div class="score">' + esc(sc) + '</div><div class="ft-badge">' + t("ft") + '</div></div>';
+}
+function compCard(m) {
+  return el('<div class="match-card">' +
+    '<div class="match-top"><span class="stage-pill">' + esc(document.getElementById("comp-name").textContent) + '</span>' +
+    '<span class="status ' + m.status + '">' + t(m.status) + '</span></div>' +
+    '<div class="versus">' + crestCol(m.home_label, m.home_logo) + compMid(m) + crestCol(m.away_label, m.away_logo) + '</div>' +
+    '<div class="venue">' + (m.kickoff ? (esc(m.kickoff.day) + " · " + esc(m.kickoff.time) + " CET") : "") + '</div>' +
+    '</div>');
+}
+
 function renderMatches() {
   var wrap = document.getElementById("matches");
+  var comp = state.comp !== "wc";
+  var src = comp ? state.compMatches : state.matches;
   var list;
   if (state.search) {
-    list = state.matches.filter(function (m) {
+    list = src.filter(function (m) {
       return ((m.home_label + " " + m.away_label).toLowerCase()).indexOf(state.search) !== -1;
     });
   } else {
-    list = state.matches.filter(function (m) { return m.status === state.filter; });
+    list = src.filter(function (m) { return m.status === state.filter; });
   }
   wrap.innerHTML = "";
   if (!list.length) {
@@ -194,7 +225,7 @@ function renderMatches() {
     wrap.appendChild(el('<div class="loading">' + msg + '</div>'));
     return;
   }
-  list.forEach(function (m) { wrap.appendChild(matchCard(m)); });
+  list.forEach(function (m) { wrap.appendChild(comp ? compCard(m) : matchCard(m)); });
   tick();
 }
 
@@ -206,6 +237,41 @@ function loadMatches() {
         '<div class="loading">Could not load matches: ' + esc(e.message) + '</div>';
     });
 }
+
+/* ----- competitions ----- */
+function loadCompetitions() {
+  fetch("/api/competitions").then(function (r) { return r.json(); }).then(function (d) {
+    var dd = document.getElementById("comp-dropdown");
+    dd.innerHTML = d.competitions.map(function (c) {
+      return '<button class="comp-item" data-id="' + c.id + '" data-name="' + esc(c.name) + '" data-logo="' + esc(c.logo) + '">' +
+        '<img class="comp-logo" src="' + esc(c.logo) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<span>' + esc(c.name) + '</span></button>';
+    }).join("");
+    dd.querySelectorAll(".comp-item").forEach(function (b) {
+      b.onclick = function () {
+        selectComp(b.getAttribute("data-id"), b.getAttribute("data-name"), b.getAttribute("data-logo"));
+        document.getElementById("comp-menu").classList.remove("open");
+      };
+    });
+  }).catch(function () {});
+}
+function selectComp(id, name, logo) {
+  state.comp = id;
+  document.getElementById("comp-name").textContent = name;
+  document.getElementById("comp-logo").src = logo;
+  document.getElementById("matches").innerHTML = '<div class="loading">Loading…</div>';
+  if (id === "wc") { renderMatches(); }
+  else { loadComp(); }
+}
+function loadComp() {
+  return fetch("/api/competition?id=" + encodeURIComponent(state.comp)).then(function (r) { return r.json(); })
+    .then(function (d) { state.compMatches = d.matches || []; renderMatches(); })
+    .catch(function (e) {
+      document.getElementById("matches").innerHTML =
+        '<div class="loading">Could not load this competition: ' + esc(e.message) + '</div>';
+    });
+}
+function loadData() { if (state.comp === "wc") loadMatches(); else loadComp(); }
 
 
 /* ----- groups ----- */
@@ -430,11 +496,20 @@ function setupMenu() {
 
 window._onLangChange = function () { renderLangs(); renderHistory(); renderMatches(); };
 
+function setupCompMenu() {
+  var menu = document.getElementById("comp-menu");
+  var trig = document.getElementById("comp-trigger");
+  if (!menu || !trig) return;
+  trig.onclick = function (e) { e.stopPropagation(); menu.classList.toggle("open"); };
+  document.addEventListener("click", function () { menu.classList.remove("open"); });
+}
+
 function init() {
-  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu();
+  setupTabs(); setupModal(); setupSearch(); setupHeaderScroll(); setupMenu(); setupCompMenu();
   applyLang();
+  loadCompetitions();
   loadMatches(); loadGroups();
   setInterval(tick, 1000);
-  setInterval(function () { loadMatches(); loadGroups(); }, 20000);
+  setInterval(function () { loadData(); loadGroups(); }, 20000);
 }
 document.addEventListener("DOMContentLoaded", init);
